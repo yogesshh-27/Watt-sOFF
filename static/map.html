@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Meter Map</title>
+    <meta name="description" content="Geospatial view of all monitored electricity meters with severity-based color coding.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: calc(100vh - 220px);
+            min-height: 500px;
+        }
+        /* Override Leaflet popup styles for dark theme */
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+        }
+        .leaflet-popup-tip {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+        }
+        .leaflet-popup-content {
+            margin: 12px 16px;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .leaflet-popup-content strong {
+            color: var(--text-white);
+        }
+        .leaflet-popup-close-button {
+            color: var(--text-muted) !important;
+        }
+        .leaflet-popup-close-button:hover {
+            color: var(--text-white) !important;
+        }
+        /* Dark map tiles */
+        .leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.8); }
+        .leaflet-control-attribution { display: none; }
+
+        .map-legend {
+            display: flex;
+            gap: var(--space-lg);
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <span class="bolt">&#9889;</span> Watt's Off
+        </div>
+        <ul class="nav-links">
+            <li><a href="/static/dashboard.html">Dashboard</a></li>
+            <li><a href="/static/analysis.html">Analysis</a></li>
+            <li><a href="/static/alerts.html">Alerts</a></li>
+            <li><a href="/static/map.html" class="active">Map</a></li>
+        </ul>
+        <div class="nav-user">
+            <span>DISCOM Officer</span>
+            <div class="avatar">DO</div>
+            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page">
+        <div class="page-header flex-between">
+            <div>
+                <h1 class="page-title">Meter Map</h1>
+                <p class="page-subtitle">Geographic view of all monitored meters with real-time severity status</p>
+            </div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--green);"></div>
+                    <span>Normal / Low Risk</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--yellow);"></div>
+                    <span>Medium Risk</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--orange);"></div>
+                    <span>High Risk</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--red);"></div>
+                    <span>Critical Risk</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div id="map"></div>
+        </div>
+
+        <!-- Meters Summary below map -->
+        <div class="card mt-lg">
+            <div class="card-header">
+                <h2 class="card-title">All Meters</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Meter ID</th>
+                            <th>Consumer</th>
+                            <th>Location</th>
+                            <th>Coordinates</th>
+                            <th>Status</th>
+                            <th>Risk Score</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="meterTable">
+                        <tr><td colspan="7" class="loading">Loading meters</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
+            window.location.href = '/static/login.html';
+        }
+
+        // Initialize Leaflet map centered on Delhi NCR
+        const map = L.map('map', {
+            zoomControl: true,
+        }).setView([28.6200, 77.2200], 11);
+
+        // Dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Severity colors
+        const severityColors = {
+            'CRITICAL': '#ff1744',
+            'HIGH': '#ff9100',
+            'MEDIUM': '#ffea00',
+            'LOW': '#00e676',
+        };
+
+        function getStatusBadge(status) {
+            if (status === 'inspection_assigned') return '<span class="badge badge-inspection">INSPECTION</span>';
+            if (status === 'false_alarm') return '<span class="badge badge-false-alarm">FALSE ALARM</span>';
+            if (status === 'flagged') return '<span class="badge badge-critical">FLAGGED</span>';
+            return '<span class="badge badge-normal">NORMAL</span>';
+        }
+
+        function getSeverityBadge(severity, score) {
+            const cls = severity ? severity.toLowerCase() : 'low';
+            return `<span class="badge badge-${cls}">${severity || 'LOW'} (${score})</span>`;
+        }
+
+        async function loadMap() {
+            try {
+                const res = await fetch('/api/map');
+                const meters = await res.json();
+
+                // Add markers
+                meters.forEach(m => {
+                    const color = severityColors[m.severity] || severityColors['LOW'];
+                    const radius = m.severity === 'CRITICAL' ? 14 :
+                                   m.severity === 'HIGH' ? 12 :
+                                   m.severity === 'MEDIUM' ? 10 : 8;
+
+                    const marker = L.circleMarker([m.lat, m.lng], {
+                        radius: radius,
+                        fillColor: color,
+                        color: color,
+                        weight: 2,
+                        opacity: 0.9,
+                        fillOpacity: 0.5,
+                    }).addTo(map);
+
+                    // Popup content
+                    const popup = `
+                        <div style="min-width: 200px;">
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-white); margin-bottom: 8px;">
+                                ${m.meter_id}
+                            </div>
+                            <div style="margin-bottom: 6px;">
+                                <strong>Consumer:</strong> ${m.consumer_name}
+                            </div>
+                            <div style="margin-bottom: 6px;">
+                                <strong>Location:</strong> ${m.location}
+                            </div>
+                            <div style="margin-bottom: 6px;">
+                                <strong>Status:</strong> ${m.status === 'flagged' ? 'Flagged' : m.status === 'normal' ? 'Normal' : m.status.replace('_', ' ')}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Risk Score:</strong> <span style="color: ${color}; font-weight: 700;">${m.risk_score}/100</span>
+                                — <span style="color: ${color};">${m.severity}</span>
+                            </div>
+                            ${m.anomaly_type ? `<div style="margin-bottom: 8px; font-size: 0.8rem; color: var(--text-muted);">Flags: ${m.anomaly_type.replace(/,/g, ', ')}</div>` : ''}
+                            <a href="/static/meter_detail.html?meter=${m.meter_id}"
+                               style="display: inline-block; padding: 6px 14px; background: var(--accent); color: white; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; margin-top: 4px;">
+                                Investigate &rarr;
+                            </a>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popup);
+
+                    // Pulsing animation for critical meters
+                    if (m.severity === 'CRITICAL' || m.severity === 'HIGH') {
+                        const pulseMarker = L.circleMarker([m.lat, m.lng], {
+                            radius: radius + 8,
+                            fillColor: color,
+                            color: color,
+                            weight: 1,
+                            opacity: 0.3,
+                            fillOpacity: 0.1,
+                            className: 'pulse-marker',
+                        }).addTo(map);
+                    }
+                });
+
+                // Populate table
+                const table = document.getElementById('meterTable');
+                table.innerHTML = meters.map(m => `
+                    <tr onclick="window.location.href='/static/meter_detail.html?meter=${m.meter_id}'">
+                        <td><strong style="color: var(--accent);">${m.meter_id}</strong></td>
+                        <td>${m.consumer_name}</td>
+                        <td>${m.location}</td>
+                        <td class="text-mono text-muted" style="font-size: 0.8rem;">${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}</td>
+                        <td>${getStatusBadge(m.status)}</td>
+                        <td class="text-mono"><strong>${m.risk_score}</strong></td>
+                        <td>${getSeverityBadge(m.severity, m.risk_score)}</td>
+                    </tr>
+                `).join('');
+
+                // Fit map to all markers
+                if (meters.length > 0) {
+                    const bounds = L.latLngBounds(meters.map(m => [m.lat, m.lng]));
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+
+            } catch (err) {
+                console.error('Map load error:', err);
+            }
+        }
+
+        loadMap();
+    </script>
+</body>
+</html>

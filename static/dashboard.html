@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Dashboard</title>
+    <meta name="description" content="Real-time electricity anomaly detection dashboard for DISCOM officers. Monitor meters, view alerts, and investigate suspicious consumption patterns.">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <span class="bolt">&#9889;</span> Watt's Off
+        </div>
+        <ul class="nav-links">
+            <li><a href="/static/dashboard.html" class="active">Dashboard</a></li>
+            <li><a href="/static/analysis.html">Analysis</a></li>
+            <li><a href="/static/alerts.html">Alerts</a></li>
+            <li><a href="/static/map.html">Map</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="userName">DISCOM Officer</span>
+            <div class="avatar" id="userAvatar">DO</div>
+            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page">
+        <div class="page-header flex-between">
+            <div>
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">
+                    <span class="live-dot"></span>
+                    Real-time anomaly monitoring &mdash; updates every 5 seconds
+                </p>
+            </div>
+            <div class="text-muted" style="font-size: 0.8rem;" id="lastUpdate">
+                Last updated: --
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid stagger" id="summaryCards">
+            <div class="summary-card total fade-in">
+                <div class="summary-icon">&#9879;</div>
+                <div class="summary-info">
+                    <div class="summary-label">Total Meters</div>
+                    <div class="summary-value" id="totalMeters">--</div>
+                </div>
+            </div>
+            <div class="summary-card normal fade-in">
+                <div class="summary-icon">&#10003;</div>
+                <div class="summary-info">
+                    <div class="summary-label">Normal</div>
+                    <div class="summary-value" id="normalMeters">--</div>
+                </div>
+            </div>
+            <div class="summary-card anomaly fade-in">
+                <div class="summary-icon">&#9888;</div>
+                <div class="summary-info">
+                    <div class="summary-label">Anomalies</div>
+                    <div class="summary-value" id="anomalyMeters">--</div>
+                </div>
+            </div>
+            <div class="summary-card critical fade-in">
+                <div class="summary-icon">&#9888;</div>
+                <div class="summary-info">
+                    <div class="summary-label">High Risk</div>
+                    <div class="summary-value" id="highRiskMeters">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid: Chart + Alerts -->
+        <div class="dashboard-grid">
+            <!-- Chart Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Live Consumption Overview</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="consumptionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Alerts Feed -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Alerts</h2>
+                    <a href="/static/alerts.html" class="btn btn-outline btn-sm">View All</a>
+                </div>
+                <div class="alert-feed" id="alertFeed">
+                    <div class="loading">Loading alerts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High-Risk Meters Table -->
+        <div class="card mt-lg">
+            <div class="card-header">
+                <h2 class="card-title">High-Risk Meters</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Meter ID</th>
+                            <th>Consumer</th>
+                            <th>Location</th>
+                            <th>Actual (kWh)</th>
+                            <th>Expected (kWh)</th>
+                            <th>Deviation</th>
+                            <th>Risk Score</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="highRiskTable">
+                        <tr><td colspan="9" class="loading">Loading data</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
+            window.location.href = '/static/login.html';
+        }
+
+        let chart = null;
+
+        function getSeverityBadge(severity, score) {
+            const cls = severity ? severity.toLowerCase() : 'low';
+            return `<span class="badge badge-${cls}">${severity || 'LOW'} (${score})</span>`;
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'inspection_assigned') return '<span class="badge badge-inspection">INSPECTION ASSIGNED</span>';
+            if (status === 'false_alarm') return '<span class="badge badge-false-alarm">FALSE ALARM</span>';
+            if (status === 'flagged') return '<span class="badge badge-critical">FLAGGED</span>';
+            return '<span class="badge badge-normal">NORMAL</span>';
+        }
+
+        function timeAgo(ts) {
+            const diff = Date.now() - new Date(ts).getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins}m ago`;
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return `${hrs}h ago`;
+            return `${Math.floor(hrs / 24)}d ago`;
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard/summary');
+                const data = await res.json();
+
+                // Update summary cards
+                document.getElementById('totalMeters').textContent = data.total_meters;
+                document.getElementById('normalMeters').textContent = data.normal_meters;
+                document.getElementById('anomalyMeters').textContent = data.anomaly_meters;
+                document.getElementById('highRiskMeters').textContent = data.high_risk_meters;
+
+                // Update last update time
+                document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+
+                // Update high-risk table
+                const table = document.getElementById('highRiskTable');
+                if (data.high_risk_list && data.high_risk_list.length > 0) {
+                    table.innerHTML = data.high_risk_list.map(m => `
+                        <tr onclick="window.location.href='/static/meter_detail.html?meter=${m.meter_id}'">
+                            <td><strong style="color: var(--accent);">${m.meter_id}</strong></td>
+                            <td>${m.consumer_name || '--'}</td>
+                            <td>${m.location}</td>
+                            <td class="text-mono">${m.actual_kwh?.toFixed(1) || '--'}</td>
+                            <td class="text-mono">${m.expected_kwh?.toFixed(1) || '--'}</td>
+                            <td class="text-mono ${m.deviation_pct > 0 ? 'text-red' : 'text-green'}">
+                                ${m.deviation_pct > 0 ? '+' : ''}${m.deviation_pct?.toFixed(0) || 0}%
+                            </td>
+                            <td class="text-mono"><strong>${m.risk_score}</strong></td>
+                            <td>${getSeverityBadge(null, m.risk_score).replace('LOW', m.risk_score >= 81 ? 'CRITICAL' : m.risk_score >= 61 ? 'HIGH' : m.risk_score >= 31 ? 'MEDIUM' : 'LOW').replace('badge-low', m.risk_score >= 81 ? 'badge-critical' : m.risk_score >= 61 ? 'badge-high' : m.risk_score >= 31 ? 'badge-medium' : 'badge-low')}</td>
+                            <td>${getStatusBadge(m.status)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    table.innerHTML = '<tr><td colspan="9" class="empty-state">No high-risk meters detected</td></tr>';
+                }
+
+                // Update alert feed
+                const feed = document.getElementById('alertFeed');
+                if (data.recent_alerts && data.recent_alerts.length > 0) {
+                    feed.innerHTML = data.recent_alerts.map(a => `
+                        <div class="alert-item" onclick="window.location.href='/static/meter_detail.html?meter=${a.meter_id}'">
+                            <div class="alert-dot ${a.severity?.toLowerCase() || 'low'}"></div>
+                            <div class="alert-content">
+                                <div class="alert-message">${a.message}</div>
+                                <div class="alert-meta">${a.meter_id} &middot; ${a.location} &middot; ${timeAgo(a.created_at)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    feed.innerHTML = '<div class="empty-state">No alerts yet</div>';
+                }
+
+                // Update chart with meter data
+                await loadChartData();
+
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+            }
+        }
+
+        async function loadChartData() {
+            try {
+                const res = await fetch('/api/meters');
+                const meters = await res.json();
+
+                const labels = meters.map(m => m.meter_id);
+                const actualData = meters.map(m => m.latest_reading?.consumption_kwh || 0);
+                const expectedData = meters.map(m => m.expected_kwh || 0);
+
+                const ctx = document.getElementById('consumptionChart').getContext('2d');
+
+                if (chart) {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = actualData;
+                    chart.data.datasets[1].data = expectedData;
+                    chart.update('none');
+                } else {
+                    chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Actual (kWh)',
+                                    data: actualData,
+                                    backgroundColor: meters.map(m => {
+                                        const s = m.severity;
+                                        if (s === 'CRITICAL') return 'rgba(255, 23, 68, 0.7)';
+                                        if (s === 'HIGH') return 'rgba(255, 145, 0, 0.7)';
+                                        if (s === 'MEDIUM') return 'rgba(255, 234, 0, 0.7)';
+                                        return 'rgba(0, 230, 118, 0.7)';
+                                    }),
+                                    borderColor: meters.map(m => {
+                                        const s = m.severity;
+                                        if (s === 'CRITICAL') return '#ff1744';
+                                        if (s === 'HIGH') return '#ff9100';
+                                        if (s === 'MEDIUM') return '#ffea00';
+                                        return '#00e676';
+                                    }),
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                },
+                                {
+                                    label: 'Expected (kWh)',
+                                    data: expectedData,
+                                    backgroundColor: 'rgba(83, 109, 254, 0.25)',
+                                    borderColor: '#536dfe',
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    borderDash: [3, 3],
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: { color: '#8b8fa3', font: { family: 'Inter', size: 12 } }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
+                                    grid: { color: 'rgba(255,255,255,0.04)' }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
+                                    grid: { color: 'rgba(255,255,255,0.04)' },
+                                    title: { display: true, text: 'kWh', color: '#8b8fa3', font: { family: 'Inter' } }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Chart load error:', err);
+            }
+        }
+
+        // Initial load
+        loadDashboard();
+
+        // Poll every 5 seconds
+        setInterval(loadDashboard, 5000);
+    </script>
+</body>
+</html>

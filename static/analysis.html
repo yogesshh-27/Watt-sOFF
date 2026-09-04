@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Consumption Analysis</title>
+    <meta name="description" content="Analyze actual vs. expected electricity consumption patterns over time for individual meters.">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <span class="bolt">&#9889;</span> Watt's Off
+        </div>
+        <ul class="nav-links">
+            <li><a href="/static/dashboard.html">Dashboard</a></li>
+            <li><a href="/static/analysis.html" class="active">Analysis</a></li>
+            <li><a href="/static/alerts.html">Alerts</a></li>
+            <li><a href="/static/map.html">Map</a></li>
+        </ul>
+        <div class="nav-user">
+            <span>DISCOM Officer</span>
+            <div class="avatar">DO</div>
+            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page">
+        <div class="page-header flex-between">
+            <div>
+                <h1 class="page-title">Consumption Analysis</h1>
+                <p class="page-subtitle">Compare actual vs. expected consumption patterns over time</p>
+            </div>
+            <div style="display: flex; gap: var(--space-md); align-items: center;">
+                <select class="form-input" id="meterSelect" onchange="loadHistory()" style="width: 280px;">
+                    <option value="">Select a meter...</option>
+                </select>
+                <a id="detailLink" href="#" class="btn btn-outline btn-sm hidden">View Detail</a>
+            </div>
+        </div>
+
+        <!-- Chart Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="chartTitle">Actual vs. Expected Consumption</h2>
+                <div id="meterInfo" class="text-muted" style="font-size: 0.8rem;"></div>
+            </div>
+            <div style="height: 400px; position: relative;">
+                <canvas id="analysisChart"></canvas>
+            </div>
+            <div id="chartEmpty" class="empty-state" style="display: none;">
+                Select a meter above to view its consumption history
+            </div>
+        </div>
+
+        <!-- Consumption Stats -->
+        <div class="card mt-lg hidden" id="statsCard">
+            <div class="card-header">
+                <h2 class="card-title">Consumption Statistics</h2>
+            </div>
+            <div class="stat-grid" id="statsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
+            window.location.href = '/static/login.html';
+        }
+
+        let chart = null;
+
+        // Load meter list for dropdown
+        async function loadMeters() {
+            try {
+                const res = await fetch('/api/meters');
+                const meters = await res.json();
+                const select = document.getElementById('meterSelect');
+
+                meters.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.meter_id;
+                    const severity = m.severity || 'LOW';
+                    const icon = severity === 'CRITICAL' ? '🔴' : severity === 'HIGH' ? '🟠' :
+                                 severity === 'MEDIUM' ? '🟡' : '🟢';
+                    opt.textContent = `${m.meter_id} — ${m.consumer_name} (${m.location}) ${icon}`;
+                    select.appendChild(opt);
+                });
+
+                // Check URL param for pre-selected meter
+                const params = new URLSearchParams(window.location.search);
+                const preselect = params.get('meter');
+                if (preselect) {
+                    select.value = preselect;
+                    loadHistory();
+                }
+            } catch (err) {
+                console.error('Meter list load error:', err);
+            }
+        }
+
+        async function loadHistory() {
+            const meterId = document.getElementById('meterSelect').value;
+            if (!meterId) {
+                document.getElementById('chartEmpty').style.display = 'block';
+                document.getElementById('statsCard').classList.add('hidden');
+                document.getElementById('detailLink').classList.add('hidden');
+                if (chart) { chart.destroy(); chart = null; }
+                return;
+            }
+
+            document.getElementById('chartEmpty').style.display = 'none';
+            document.getElementById('detailLink').classList.remove('hidden');
+            document.getElementById('detailLink').href = `/static/meter_detail.html?meter=${meterId}`;
+
+            try {
+                const res = await fetch(`/api/meters/${meterId}/history`);
+                const readings = await res.json();
+
+                if (readings.length === 0) {
+                    document.getElementById('chartEmpty').style.display = 'block';
+                    document.getElementById('chartEmpty').textContent = 'No readings found for this meter';
+                    return;
+                }
+
+                // Prepare chart data
+                const labels = readings.map(r => {
+                    const d = new Date(r.timestamp);
+                    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) + ' ' +
+                           d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                });
+                const actualData = readings.map(r => r.consumption_kwh);
+                const expectedData = readings.map(r => r.expected_kwh);
+
+                // Update chart title
+                document.getElementById('chartTitle').textContent = `Actual vs. Expected — ${meterId}`;
+
+                // Compute stats
+                const avgActual = actualData.reduce((a, b) => a + b, 0) / actualData.length;
+                const avgExpected = expectedData.reduce((a, b) => a + b, 0) / expectedData.length;
+                const maxActual = Math.max(...actualData);
+                const maxDeviation = Math.max(...actualData.map((a, i) => {
+                    const e = expectedData[i] || 1;
+                    return ((a - e) / e) * 100;
+                }));
+
+                // Show stats
+                document.getElementById('statsCard').classList.remove('hidden');
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-label">Avg Actual (kWh)</div>
+                        <div class="stat-value">${avgActual.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Avg Expected (kWh)</div>
+                        <div class="stat-value" style="color: var(--accent);">${avgExpected.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Peak Consumption</div>
+                        <div class="stat-value ${maxActual > avgExpected * 2 ? 'positive' : ''}">${maxActual.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Max Deviation</div>
+                        <div class="stat-value ${maxDeviation > 100 ? 'positive' : ''}">${maxDeviation > 0 ? '+' : ''}${maxDeviation.toFixed(0)}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Readings Shown</div>
+                        <div class="stat-value">${readings.length}</div>
+                    </div>
+                `;
+
+                // Build chart
+                const ctx = document.getElementById('analysisChart').getContext('2d');
+
+                if (chart) chart.destroy();
+
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Actual (kWh)',
+                                data: actualData,
+                                borderColor: '#ff1744',
+                                backgroundColor: 'rgba(255, 23, 68, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 2,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: '#ff1744',
+                            },
+                            {
+                                label: 'Expected (kWh)',
+                                data: expectedData,
+                                borderColor: '#536dfe',
+                                backgroundColor: 'rgba(83, 109, 254, 0.05)',
+                                borderWidth: 2,
+                                borderDash: [6, 3],
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                        plugins: {
+                            legend: {
+                                labels: { color: '#8b8fa3', font: { family: 'Inter', size: 12 } }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1a1f2d',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1,
+                                titleColor: '#e8eaed',
+                                bodyColor: '#8b8fa3',
+                                titleFont: { family: 'Inter', weight: '600' },
+                                bodyFont: { family: 'JetBrains Mono' },
+                                padding: 12,
+                                callbacks: {
+                                    afterBody: function(items) {
+                                        if (items.length >= 2) {
+                                            const actual = items[0].raw;
+                                            const expected = items[1].raw;
+                                            const dev = expected > 0 ? ((actual - expected) / expected * 100) : 0;
+                                            return `Deviation: ${dev > 0 ? '+' : ''}${dev.toFixed(0)}%`;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#5a5e72',
+                                    font: { family: 'Inter', size: 10 },
+                                    maxTicksLimit: 12,
+                                    maxRotation: 45,
+                                },
+                                grid: { color: 'rgba(255,255,255,0.03)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
+                                grid: { color: 'rgba(255,255,255,0.04)' },
+                                title: {
+                                    display: true,
+                                    text: 'Consumption (kWh)',
+                                    color: '#8b8fa3',
+                                    font: { family: 'Inter' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error('History load error:', err);
+            }
+        }
+
+        loadMeters();
+    </script>
+</body>
+</html>

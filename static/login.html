@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Login</title>
+    <meta name="description" content="Watt's Off AI anomaly detection system for DISCOM electricity theft monitoring. Sign in to access the dashboard.">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card fade-in">
+            <div class="login-logo">
+                <h1><span class="bolt">&#9889;</span> Watt's Off</h1>
+                <p>AI-Powered Anomaly Detection for DISCOMs</p>
+            </div>
+
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input class="form-input" type="email" id="email" name="email"
+                           placeholder="demo@discom.gov.in" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-input" type="password" id="password" name="password"
+                           placeholder="Enter password" required autocomplete="current-password">
+                </div>
+
+                <div id="loginError" class="hidden" style="color: var(--red); font-size: 0.85rem; margin-bottom: var(--space-md);">
+                    Invalid credentials. Use the demo account below.
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="login-note">
+                <strong>Prototype Demo Account</strong><br>
+                This is a hackathon prototype with mock authentication.<br>
+                Email: <code style="color: var(--text-white);">demo@discom.gov.in</code><br>
+                Password: <code style="color: var(--text-white);">wattsoff</code>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Mock authentication — hardcoded demo credential
+            if (email === 'demo@discom.gov.in' && password === 'wattsoff') {
+                sessionStorage.setItem('wattsoff_auth', 'true');
+                sessionStorage.setItem('wattsoff_user', 'DISCOM Officer');
+                window.location.href = '/static/dashboard.html';
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }
+            return false;
+        }
+
+        // If already logged in, redirect to dashboard
+        if (sessionStorage.getItem('wattsoff_auth') === 'true') {
+            window.location.href = '/static/dashboard.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Alerts</title>
+    <meta name="description" content="View all active electricity anomaly alerts with severity classifications and risk scores.">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <span class="bolt">&#9889;</span> Watt's Off
+        </div>
+        <ul class="nav-links">
+            <li><a href="/static/dashboard.html">Dashboard</a></li>
+            <li><a href="/static/analysis.html">Analysis</a></li>
+            <li><a href="/static/alerts.html" class="active">Alerts</a></li>
+            <li><a href="/static/map.html">Map</a></li>
+        </ul>
+        <div class="nav-user">
+            <span>DISCOM Officer</span>
+            <div class="avatar">DO</div>
+            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page">
+        <div class="page-header flex-between">
+            <div>
+                <h1 class="page-title">Alerts</h1>
+                <p class="page-subtitle">All anomaly alerts sorted by risk score. Click any row to investigate.</p>
+            </div>
+            <div>
+                <select class="form-input" id="filterSeverity" onchange="filterAlerts()" style="width: 180px;">
+                    <option value="all">All Severities</option>
+                    <option value="CRITICAL">&#128308; Critical</option>
+                    <option value="HIGH">&#128992; High</option>
+                    <option value="MEDIUM">&#128993; Medium</option>
+                    <option value="LOW">&#128994; Low</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Severity</th>
+                            <th>Meter</th>
+                            <th>Consumer</th>
+                            <th>Location</th>
+                            <th>Risk Score</th>
+                            <th>Anomaly Type</th>
+                            <th>Actual (kWh)</th>
+                            <th>Expected (kWh)</th>
+                            <th>Deviation</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsTable">
+                        <tr><td colspan="12" class="loading">Loading alerts</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
+            window.location.href = '/static/login.html';
+        }
+
+        let allAlerts = [];
+
+        function getSeverityBadge(severity) {
+            const cls = severity ? severity.toLowerCase() : 'low';
+            const icons = { 'critical': '&#128308;', 'high': '&#128992;', 'medium': '&#128993;', 'low': '&#128994;' };
+            return `<span class="badge badge-${cls}">${icons[cls] || ''} ${severity || 'LOW'}</span>`;
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'inspection_assigned') return '<span class="badge badge-inspection">INSPECTION</span>';
+            if (status === 'false_alarm') return '<span class="badge badge-false-alarm">FALSE ALARM</span>';
+            if (status === 'flagged') return '<span class="badge badge-critical">FLAGGED</span>';
+            return '<span class="badge badge-normal">NORMAL</span>';
+        }
+
+        function timeAgo(ts) {
+            const diff = Date.now() - new Date(ts).getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins}m ago`;
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return `${hrs}h ago`;
+            return `${Math.floor(hrs / 24)}d ago`;
+        }
+
+        function renderAlerts(alerts) {
+            const table = document.getElementById('alertsTable');
+            if (alerts.length === 0) {
+                table.innerHTML = '<tr><td colspan="12" class="empty-state">No alerts match the filter</td></tr>';
+                return;
+            }
+
+            table.innerHTML = alerts.map(a => `
+                <tr onclick="window.location.href='/static/meter_detail.html?meter=${a.meter_id}'">
+                    <td class="text-muted">#${a.id}</td>
+                    <td>${getSeverityBadge(a.severity)}</td>
+                    <td><strong style="color: var(--accent);">${a.meter_id}</strong></td>
+                    <td>${a.consumer_name || '--'}</td>
+                    <td>${a.location}</td>
+                    <td class="text-mono"><strong>${a.risk_score}</strong></td>
+                    <td style="font-size: 0.8rem;">${(a.anomaly_type || '').replace(/,/g, ', ')}</td>
+                    <td class="text-mono">${a.actual_kwh?.toFixed(1) || '--'}</td>
+                    <td class="text-mono">${a.expected_kwh?.toFixed(1) || '--'}</td>
+                    <td class="text-mono ${a.deviation_pct > 0 ? 'text-red' : 'text-green'}">
+                        ${a.deviation_pct > 0 ? '+' : ''}${a.deviation_pct?.toFixed(0) || 0}%
+                    </td>
+                    <td>${getStatusBadge(a.anomaly_status)}</td>
+                    <td class="text-muted" style="font-size: 0.8rem;">${timeAgo(a.created_at)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAlerts() {
+            const filter = document.getElementById('filterSeverity').value;
+            if (filter === 'all') {
+                renderAlerts(allAlerts);
+            } else {
+                renderAlerts(allAlerts.filter(a => a.severity === filter));
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const res = await fetch('/api/alerts');
+                allAlerts = await res.json();
+                filterAlerts();
+            } catch (err) {
+                console.error('Alerts load error:', err);
+                document.getElementById('alertsTable').innerHTML =
+                    '<tr><td colspan="12" class="empty-state">Error loading alerts</td></tr>';
+            }
+        }
+
+        loadAlerts();
+        // Refresh every 10 seconds
+        setInterval(loadAlerts, 10000);
+    </script>
+</body>
+</html>
