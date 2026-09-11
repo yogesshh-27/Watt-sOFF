@@ -122,13 +122,14 @@ Alerts are auto-created when risk ≥ 61.
 
 ## Frontend Pages
 
-1. **Login** — Mock auth (demo@discom.gov.in / wattsoff)
-2. **Dashboard** — Summary cards, live chart, high-risk table, alert feed
-3. **Consumption Analysis** — Actual vs. expected line chart per meter
-4. **Alerts** — Full alert list with severity filtering
-5. **Map** — Leaflet.js map with severity-colored markers
-6. **Meter Detail** — Investigation view with risk gauge, why-flagged checklist, action buttons
-7. **Officer Actions** — Send for Inspection / Mark as False Alarm (on Meter Detail page)
+1. **Dual Login Portal** — Role selector between DISCOM Officer Admin and Citizen Vigilance
+2. **Dashboard (NexStudio)** — Floating pill nav, WebGL Three.js wave canvas, distribution feeder energy balance, and bento grid
+3. **Citizen Vigilance Portal** — Public theft reporting with Firebase Google Auth, 100% anonymous mode, drag-and-drop evidence dropzone, and 5-stage raid tracking stepper
+4. **Bounty Calculator** — Interactive calculation of 10% citizen reward (₹5,000–₹50,000) under Section 135 Electricity Act
+5. **Consumption Analysis** — Actual vs. expected line chart telemetry per meter
+6. **Alerts** — Full alert list with theft severity filtering
+7. **Geospatial Map** — Leaflet.js interactive map with severity-colored markers
+8. **Meter Detail** — Deep investigation view with risk gauge, why-flagged checklist, and raid dispatch buttons
 
 ---
 
@@ -141,19 +142,23 @@ wattsoff/
 ├── detection.py        # Anomaly detection engine
 ├── simulate.py         # Data generator (seed + live mode)
 ├── test_detection.py   # Assert-based tests
-├── schema.sql          # Database DDL
+├── schema.sql          # Database DDL (including citizen complaints & timeline)
 ├── requirements.txt    # flask, flask-cors
 ├── NOTES.md            # Detection engine trade-off explanation
 ├── README.md           # This file
 ├── wattsoff.db         # SQLite database (generated)
 └── static/
-    ├── style.css        # Dark dashboard theme
-    ├── login.html
-    ├── dashboard.html
-    ├── meter_detail.html
-    ├── alerts.html
-    ├── analysis.html
-    └── map.html
+    ├── style.css        # NexStudio design system & dark dashboard theme
+    ├── firebase-config.js # Client-side Firebase credentials
+    ├── firebase-auth.js   # Google OAuth authentication logic
+    ├── login.html       # Dual portal access page
+    ├── citizen.html     # NexStudio public citizen vigilance & tracking portal
+    ├── dashboard.html   # DISCOM officer surveillance dashboard
+    ├── meter_detail.html# Deep investigation view
+    ├── alerts.html      # Raid dispatch & triage queue
+    ├── analysis.html    # Baseline deviation telemetry
+    ├── map.html         # Geospatial theft map
+    └── uploads/         # Geotagged citizen evidence storage
 ```
 
 ---
