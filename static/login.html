@@ -1,74 +1,435 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watt's Off — Login</title>
-    <meta name="description" content="Watt's Off AI anomaly detection system for DISCOM electricity theft monitoring. Sign in to access the dashboard.">
+    <title>Watt's Off — Select Access Portal</title>
+    <meta name="description"
+        content="Watt's Off — Choose between DISCOM Officer Admin Dashboard and Public Citizen Vigilance Portal.">
     <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Firebase App & Auth SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="/static/firebase-config.js"></script>
+    <script src="/static/firebase-auth.js"></script>
+
+    <style>
+        .portal-viewport {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-dark);
+            padding: 40px 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .portal-ambient-orb-1 {
+            position: absolute;
+            width: 700px;
+            height: 700px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+            top: 10%;
+            left: 20%;
+            transform: translate(-50%, -50%);
+        }
+
+        .portal-ambient-orb-2 {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            bottom: 10%;
+            right: 20%;
+            transform: translate(50%, 50%);
+        }
+
+        .portal-container {
+            width: 100%;
+            max-width: 980px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .portal-brand-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .portal-brand-header h1 {
+            font-size: clamp(2.2rem, 4vw, 3.2rem);
+            font-weight: 800;
+            color: #FFF;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .portal-brand-header h1 em {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-weight: 400;
+            color: var(--accent-cyan);
+        }
+
+        .portal-brand-header p {
+            font-size: 1.05rem;
+            color: var(--text-dark-muted);
+            margin-top: 8px;
+            max-width: 580px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Dual Portal Cards Grid */
+        .portal-dual-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 28px;
+            align-items: stretch;
+        }
+
+        .portal-card {
+            background: var(--bg-dark-card);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-2xl);
+            padding: 40px 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .portal-card:hover {
+            border-color: var(--border-dark-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .portal-card.citizen-card {
+            border-top: 3px solid var(--accent-cyan);
+        }
+
+        .portal-card.admin-card {
+            border-top: 3px solid var(--accent-electric);
+        }
+
+        .portal-card-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            margin-bottom: 20px;
+            width: fit-content;
+        }
+
+        .portal-card h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #FFF;
+            letter-spacing: -0.01em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .portal-card-desc {
+            font-size: 0.9rem;
+            color: var(--text-dark-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .feature-bullets {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 28px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feature-bullets li {
+            font-size: 0.85rem;
+            color: var(--text-dark-body);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .feature-bullets li span.bullet-icon {
+            font-size: 0.9rem;
+            color: var(--green);
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .demo-credential-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-top: 16px;
+            font-size: 0.78rem;
+            color: var(--text-dark-body);
+        }
+
+        .demo-credential-pill code {
+            font-family: var(--font-mono);
+            color: #FFF;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Google Sign-in */
+        .btn-google-auth {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: #FFFFFF;
+            color: #1F1F1F;
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 14px 24px;
+            border-radius: var(--radius-full);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+            text-decoration: none;
+        }
+
+        .btn-google-auth:hover {
+            background: #F8F9FA;
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body>
-    <div class="login-page">
-        <div class="login-card fade-in">
-            <div class="login-logo">
-                <h1><span class="bolt">&#9889;</span> Watt's Off</h1>
-                <p>AI-Powered Anomaly Detection for DISCOMs</p>
+
+<body class="citizen-body">
+
+    <div class="portal-viewport">
+        <div class="portal-ambient-orb-1"></div>
+        <div class="portal-ambient-orb-2"></div>
+
+        <div class="portal-container">
+            <!-- Brand Header -->
+            <div class="portal-brand-header">
+                <div class="badge-theft-normal"
+                    style="display:inline-flex; align-items:center; gap:6px; margin-bottom:16px;">
+                    <span>&#9889;</span> AI Electricity Theft Detection Platform
+                </div>
+                <h1>Watt's <em>Off</em></h1>
+                <p>Choose your access portal: Report and track power theft incidents as a verified citizen, or sign in
+                    as an authorized DISCOM officer for live grid telemetry.</p>
             </div>
 
-            <form id="loginForm" onsubmit="return handleLogin(event)">
-                <div class="form-group">
-                    <label class="form-label" for="email">Email Address</label>
-                    <input class="form-input" type="email" id="email" name="email"
-                           placeholder="demo@discom.gov.in" required autocomplete="email">
+            <!-- 2 Distinct Portal Cards -->
+            <div class="portal-dual-grid">
+
+                <!-- ========================================================= -->
+                <!-- PORTAL OPTION 1: CITIZEN VIGILANCE PORTAL (FIREBASE GOOGLE) -->
+                <!-- ========================================================= -->
+                <div class="portal-card citizen-card">
+                    <div>
+                        <div class="portal-card-badge"
+                            style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3);">
+                            <span>&#128274;</span> FIREBASE GOOGLE AUTH REQUIRED
+                        </div>
+
+                        <h2>
+                            <span style="color: var(--accent-cyan);">&#128227;</span> Citizen Portal
+                        </h2>
+                        <p class="portal-card-desc">
+                            To ensure whistleblower authenticity and prevent spam, <strong>login with Google via
+                                Firebase</strong> is required before filing a complaint. You may still remain anonymous
+                            on inspection reports.
+                        </p>
+
+                        <ul class="feature-bullets">
+                            <li>
+                                <span class="bullet-icon">&#10004;</span>
+                                <div><strong>Firebase Verified Whistleblower</strong> linked to your Google Account for
+                                    reward eligibility.</div>
+                            </li>
+                            <li>
+                                <span class="bullet-icon">&#10004;</span>
+                                <div><strong>Upload Photo Evidence</strong> (drag &amp; drop or camera photos of illegal
+                                    katia hooks &amp; seals).</div>
+                            </li>
+                            <li>
+                                <span class="bullet-icon">&#10004;</span>
+                                <div><strong>5-Stage Investigation Tracker</strong> with real-time enforcement team
+                                    dispatch updates.</div>
+                            </li>
+                            <li>
+                                <span class="bullet-icon">&#10004;</span>
+                                <div><strong>100% Anonymous Mode</strong> hides personal details from field inspection
+                                    squads while keeping account verified.</div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <!-- Firebase Google Sign-In Button -->
+                        <button type="button" id="btnGoogleSignIn" onclick="handleFirebaseGoogleSignIn()"
+                            class="btn-google-auth" style="margin-bottom: 12px;">
+                            <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0;">
+                                <path fill="#EA4335"
+                                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                                <path fill="#4285F4"
+                                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                                <path fill="#FBBC05"
+                                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z" />
+                                <path fill="#34A853"
+                                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                                <path fill="none" d="M0 0h48v48H0z" />
+                            </svg>
+                            <span id="googleBtnText">Sign in with Google &#8599;</span>
+                        </button>
+
+                        <a href="/static/citizen.html#track-section" class="btn-pill btn-pill-outline"
+                            style="width: 100%; justify-content: center; border-color: var(--border-dark); color: var(--text-dark-muted); font-size: 0.85rem;">
+                            <span>&#128269;</span> Already have a Ticket? Track here &rarr;
+                        </a>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input class="form-input" type="password" id="password" name="password"
-                           placeholder="Enter password" required autocomplete="current-password">
+                <!-- ========================================================= -->
+                <!-- PORTAL OPTION 2: DISCOM ADMIN & GRID OPERATIONS -->
+                <!-- ========================================================= -->
+                <div class="portal-card admin-card">
+                    <div>
+                        <div class="portal-card-badge"
+                            style="background: rgba(99, 102, 241, 0.15); color: #FFF; border: 1px solid rgba(99, 102, 241, 0.3);">
+                            <span>&#128274;</span> DISCOM AUTHORIZED PERSONNEL
+                        </div>
+
+                        <h2>
+                            <span style="color: var(--accent-electric);">&#9889;</span> Admin &amp; Operations
+                        </h2>
+                        <p class="portal-card-desc">
+                            Authorized access for DISCOM vigilance officers, grid engineers, and substation supervisors
+                            to monitor smart meter telemetry, AI theft scoring, and raid dispatch.
+                        </p>
+
+                        <!-- Admin Sign-In Form -->
+                        <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label class="form-label" for="adminEmail" style="font-size: 0.8rem;">Officer Official
+                                    Email</label>
+                                <input class="form-input" type="email" id="adminEmail" name="email"
+                                    value="demo@discom.gov.in" placeholder="demo@discom.gov.in" required
+                                    autocomplete="email" style="font-size: 0.88rem; padding: 10px 14px;">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label class="form-label" for="adminPassword" style="font-size: 0.8rem;">Security
+                                    Password</label>
+                                <input class="form-input" type="password" id="adminPassword" name="password"
+                                    value="wattsoff" placeholder="Enter password" required
+                                    autocomplete="current-password" style="font-size: 0.88rem; padding: 10px 14px;">
+                            </div>
+
+                            <div id="loginError"
+                                style="display: none; color: var(--red); font-size: 0.8rem; margin-bottom: 12px;">
+                                &#10007; Invalid officer credentials. Use demo account below.
+                            </div>
+
+                            <button type="submit" class="btn-pill btn-pill-white btn-pill-lg"
+                                style="width: 100%; justify-content: center; background: #6366F1; color: #FFF; border: none; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);">
+                                Access Admin Dashboard &#8599;
+                            </button>
+                        </form>
+
+                        <div class="demo-credential-pill">
+                            <div style="font-weight: 700; color: #FFF; margin-bottom: 4px;">Demo Officer Account</div>
+                            <div>Email: <code>demo@discom.gov.in</code> &bull; Pass: <code>wattsoff</code></div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="margin-top: 18px; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dark-muted);">
+                        <span>Grid Anomaly Engine: Active</span>
+                        <a href="/static/alerts.html" style="color: var(--accent-cyan);">View Live Alerts &rarr;</a>
+                    </div>
                 </div>
 
-                <div id="loginError" class="hidden" style="color: var(--red); font-size: 0.85rem; margin-bottom: var(--space-md);">
-                    Invalid credentials. Use the demo account below.
-                </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
-                    Sign In
-                </button>
-            </form>
-
-            <div class="login-note">
-                <strong>Prototype Demo Account</strong><br>
-                This is a hackathon prototype with mock authentication.<br>
-                Email: <code style="color: var(--text-white);">demo@discom.gov.in</code><br>
-                Password: <code style="color: var(--text-white);">wattsoff</code>
+            <!-- Footer note -->
+            <div style="text-align: center; margin-top: 36px; font-size: 0.85rem; color: var(--text-dark-muted);">
+                Smart India Hackathon 2026 &bull; National Power Grid Theft Detection Architecture
             </div>
         </div>
     </div>
 
+    <!-- Login Authentication Script -->
     <script>
-        function handleLogin(e) {
+        function handleAdminLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
 
-            // Mock authentication — hardcoded demo credential
             if (email === 'demo@discom.gov.in' && password === 'wattsoff') {
                 sessionStorage.setItem('wattsoff_auth', 'true');
                 sessionStorage.setItem('wattsoff_user', 'DISCOM Officer');
+                sessionStorage.setItem('wattsoff_role', 'ADMIN');
                 window.location.href = '/static/dashboard.html';
             } else {
-                document.getElementById('loginError').classList.remove('hidden');
-                document.getElementById('password').value = '';
-                document.getElementById('password').focus();
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
             }
-            return false;
         }
 
-        // If already logged in, redirect to dashboard
-        if (sessionStorage.getItem('wattsoff_auth') === 'true') {
-            window.location.href = '/static/dashboard.html';
+        // Firebase Google Authentication for Citizen Portal
+        async function handleFirebaseGoogleSignIn() {
+            const btn = document.getElementById('btnGoogleSignIn');
+            const text = document.getElementById('googleBtnText');
+            const orig = text.textContent;
+
+            try {
+                text.textContent = 'Authenticating with Firebase...';
+                btn.disabled = true;
+
+                const res = await signInWithGoogleFirebase();
+                if (res && res.success) {
+                    window.location.href = '/static/citizen.html#report-section';
+                }
+            } catch (err) {
+                console.error("[Firebase Auth] Error:", err);
+                alert("Firebase Google Sign-In encountered an issue: " + (err.message || err));
+            } finally {
+                text.textContent = orig;
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
+
 </html>

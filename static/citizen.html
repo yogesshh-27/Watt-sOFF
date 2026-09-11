@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watt's Off — Citizen Vigilance & Power Theft Reporting Portal</title>
+    <meta name="description" content="Report electricity theft, track vigilance enforcement in real-time, and claim verified cash bounties under the Electricity Act 2003.">
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Three.js CDN for NexStudio 3D Interactive Grid Mesh -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Firebase App & Auth SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="/static/firebase-config.js"></script>
+    <script src="/static/firebase-auth.js"></script>
+
+    <style>
+        /* Specific NexStudio Citizen Enhancements */
+        .citizen-page-wrap {
+            background-color: var(--bg-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Bento Grid Layout Fix */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            margin-bottom: 70px;
+            width: 100%;
+        }
+
+        .bento-col-7 { grid-column: span 7; }
+        .bento-col-5 { grid-column: span 5; }
+        .bento-col-6 { grid-column: span 6; }
+        .bento-col-12 { grid-column: span 12; }
+
+        @media (max-width: 992px) {
+            .bento-col-7, .bento-col-5, .bento-col-6 {
+                grid-column: span 12 !important;
+            }
+        }
+
+        .bento-header, .bento-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .bento-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: var(--radius-full);
+            font-size: 0.78rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--accent-electric);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+
+        .bento-title, .bento-card-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        .bento-desc {
+            font-size: 0.94rem;
+            color: var(--text-dark-body);
+            line-height: 1.65;
+        }
+
+        /* Pill Tabs */
+        .console-tabs-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        .console-pill-tabs {
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-full);
+            padding: 6px;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .console-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dark-muted);
+            font-size: 0.92rem;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .console-tab-btn:hover {
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .console-tab-btn.active {
+            background: #FFFFFF;
+            color: #0A0A0C;
+            box-shadow: 0 4px 18px rgba(255, 255, 255, 0.18);
+        }
+
+        /* Whistleblower Glass Card */
+        .glass-console-card {
+            background: var(--bg-dark-card);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-2xl);
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s ease;
+        }
+
+        .glass-console-card:hover {
+            border-color: var(--border-dark-hover);
+        }
+
+        /* Photo Dropzone */
+        .upload-dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.16);
+            border-radius: var(--radius-lg);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .upload-dropzone:hover, .upload-dropzone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .dropzone-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+            color: var(--accent-cyan);
+        }
+
+        .preview-container {
+            margin-top: 18px;
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .preview-img {
+            max-height: 240px;
+            max-width: 100%;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-dark-hover);
+            object-fit: cover;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .preview-remove-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--red);
+            color: #FFF;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .preview-remove-btn:hover {
+            transform: scale(1.15);
+        }
+
+        /* 5-Stage Stepper */
+        .stepper-wrap {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin: 28px 0;
+        }
+
+        .stepper-item {
+            display: flex;
+            gap: 20px;
+            position: relative;
+            padding-bottom: 32px;
+        }
+
+        .stepper-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .stepper-line {
+            position: absolute;
+            top: 40px;
+            left: 19px;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-dark);
+        }
+
+        .stepper-item.completed .stepper-line {
+            background: var(--green);
+        }
+
+        .stepper-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-dark-surface);
+            border: 2px solid var(--border-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-dark-muted);
+            z-index: 2;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .stepper-item.completed .stepper-icon {
+            background: var(--green-dim);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .stepper-item.active .stepper-icon {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-electric);
+            color: #FFF;
+            box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.2);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+        }
+
+        .stepper-content {
+            flex: 1;
+        }
+
+        .stepper-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stepper-desc {
+            font-size: 0.88rem;
+            color: var(--text-dark-muted);
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+
+        .stepper-time {
+            font-size: 0.78rem;
+            font-family: var(--font-mono);
+            color: var(--text-dark-muted);
+            margin-top: 6px;
+        }
+
+        .sample-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-dark);
+            padding: 5px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.82rem;
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sample-pill:hover {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        .badge-citizen-status {
+            padding: 5px 14px;
+            border-radius: var(--radius-full);
+            font-size: 0.78rem;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
+
+        /* Interactive Bounty Calculator */
+        .calc-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-xl);
+            padding: 30px;
+            margin-top: 24px;
+        }
+
+        .calc-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .calc-metric-card {
+            background: var(--bg-dark-surface);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .calc-metric-val {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: var(--green);
+            font-family: var(--font-mono);
+            margin-top: 6px;
+        }
+
+        /* Accordion FAQ */
+        .faq-item {
+            border-bottom: 1px solid var(--border-dark);
+            padding: 20px 0;
+        }
+
+        .faq-question {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #FFF;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-answer {
+            font-size: 0.92rem;
+            color: var(--text-dark-body);
+            line-height: 1.6;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .faq-item.open .faq-answer {
+            display: block;
+        }
+
+        .faq-item.open .faq-chevron {
+            transform: rotate(180deg);
+        }
+
+        .faq-chevron {
+            transition: transform 0.2s ease;
+            color: var(--accent-cyan);
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Pill Navigation (NexStudio style) -->
+    <header class="nav-wrapper">
+        <nav class="nav-pill" id="mainNav">
+            <a href="/static/citizen.html" class="nav-brand">
+                <div class="nav-brand-icon">&#9889;</div>
+                <div class="nav-brand-text">Watt's <span>Off</span> <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-cyan); letter-spacing: 0.05em; margin-left: 4px; text-transform: uppercase;">Citizen</span></div>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="#overview" class="nav-link">Overview</a></li>
+                <li><a href="#report-section" onclick="switchPortalTab('report')" class="nav-link active">Report Theft</a></li>
+                <li><a href="#track-section" onclick="switchPortalTab('track')" class="nav-link">Track Status</a></li>
+                <li><a href="#bounty-section" onclick="switchPortalTab('bounty')" class="nav-link">Bounties</a></li>
+                <li><a href="#legal-section" onclick="switchPortalTab('legal')" class="nav-link">Statutory Laws</a></li>
+                <li><a href="/static/dashboard.html" class="nav-link" style="color: var(--text-light-muted);">Officer Admin &#8599;</a></li>
+            </ul>
+            <div class="nav-actions">
+                <!-- Verified User Avatar (Shown when logged in via Firebase) -->
+                <div id="navUserBadge" style="display: none; align-items: center; gap: 10px; margin-right: 4px;">
+                    <div id="navAvatar" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4);">
+                        C
+                    </div>
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #0A0A0C;">
+                        <span id="navUserName">Citizen</span>
+                        <span style="color: var(--green); font-size: 0.75rem; margin-left: 2px;">&#10004;</span>
+                    </div>
+                    <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 4px 10px; font-size: 0.75rem;">
+                        Sign Out
+                    </button>
+                </div>
+
+                <!-- Google Sign In Button (Shown when not logged in) -->
+                <button id="navSignInBtn" onclick="handleCitizenFirebaseSignIn()" class="btn-pill btn-pill-dark btn-pill-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    Google Login
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- NexStudio Light & Elegant Hero Section -->
+    <section class="hero-section" id="overview">
+        <div class="hero-tag-pill">
+            <span class="hero-tag-dot"></span>
+            Public Grid Vigilance &amp; Anonymous Whistleblower Protection
+        </div>
+
+        <h1 class="hero-title">
+            Report Power Theft. <em>Earn Cash Rewards.</em> Safeguard Your Grid.
+        </h1>
+
+        <p class="hero-subtitle">
+            Direct katia wires, underground bypasses, and meter tampering destroy neighborhood transformers and surge power tariffs for honest consumers. Submit geotagged evidence anonymously or with Google to receive up to <strong>&#8377;50,000 vigilance bounty</strong> under statutory law.
+        </p>
+
+        <div class="hero-cta-group">
+            <a href="#report-section" onclick="switchPortalTab('report')" class="btn-pill btn-pill-dark btn-pill-lg">
+                File Theft Report &#8600;
+            </a>
+            <a href="#track-section" onclick="switchPortalTab('track')" class="btn-pill btn-pill-outline btn-pill-lg">
+                Track Existing Ticket &#8599;
+            </a>
+            <button onclick="handleCitizenFirebaseSignIn()" class="btn-pill btn-pill-outline btn-pill-lg" style="background: rgba(66, 133, 244, 0.08); border-color: rgba(66, 133, 244, 0.3);">
+                &#128273; Google Verified Login
+            </button>
+        </div>
+
+        <!-- Regulators & Authority Strip -->
+        <div class="partner-strip">
+            <div class="partner-logo">&#9889; DELHI TRANSCO VIGILANCE</div>
+            <div class="partner-logo">&#10070; MINISTRY OF POWER</div>
+            <div class="partner-logo">&#9670; SPECIAL POLICE FLY-SQUAD</div>
+            <div class="partner-logo">&#9650; BUREAU OF ENERGY EFFICIENCY</div>
+            <div class="partner-logo">&#9632; SECTION 135 STATUTORY CELL</div>
+        </div>
+
+        <!-- NexStudio 3D WebGL Mesh Canvas Banner -->
+        <div class="hero-canvas-container">
+            <canvas id="citizenThreeCanvas"></canvas>
+            <div class="hero-canvas-overlay">
+                <div class="canvas-overlay-badge">&#9889; Civic Telemetry &amp; AI Cross-Check</div>
+                <div class="canvas-overlay-title">Reports Reconciled with <em>Feeder Transformer</em> Energy Gaps</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pitch-Black Section: Bento Grid Features & Civic Framework -->
+    <section class="black-section">
+        <div class="section-container">
+
+            <div class="section-header-split">
+                <div>
+                    <div class="section-eyebrow">Civic Whistleblower Framework</div>
+                    <h2 class="section-title">Zero Fear. Direct Bounties. <em>Real Impact.</em></h2>
+                </div>
+                <p class="section-desc">
+                    Citizens are the first line of defense against organized distribution power theft. Our dual AI-telemetry and field flying squads ensure complaints are acted on in hours while keeping whistleblower identities strictly confidential.
+                </p>
+            </div>
+
+            <!-- Bento Grid (NexStudio Style) -->
+            <div class="bento-grid" style="margin-top: 36px;">
+                <!-- Bento Card 1: Large Bounty Card (Span 7) -->
+                <div class="bento-card bento-col-7" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(6, 182, 212, 0.05)); border-color: rgba(99, 102, 241, 0.3);">
+                    <div class="bento-header">
+                        <span class="bento-badge" style="background: rgba(0, 229, 153, 0.15); color: var(--green); border-color: rgba(0, 229, 153, 0.3);">&#8377; Statutory Cash Bounty</span>
+                        <div style="font-size: 2rem;">&#128176;</div>
+                    </div>
+                    <div class="bento-title" style="font-size: 1.6rem; margin-top: 12px;">
+                        &#8377;5,000 to &#8377;50,000 Direct Bank Bounty
+                    </div>
+                    <p class="bento-desc" style="font-size: 0.95rem; line-height: 1.6;">
+                        Under the DISCOM Whistleblower Incentive Rules (Electricity Act Section 135), citizens who submit verifiable evidence of unauthorized tapping or meter bypass receive <strong>10% of the compounding penalty assessed</strong>, paid directly to your bank account or UPI after raid realization.
+                    </p>
+                    <div style="display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: #FFF; font-family: var(--font-mono);">&#8377;4,85,000</div>
+                            <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Disbursed This Quarter</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--green); font-family: var(--font-mono);">34 Informants</div>
+                            <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Rewarded in NCR</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-cyan); font-family: var(--font-mono);">100% Tax Exempt</div>
+                            <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Govt Vigilance Grant</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bento Card 2: 100% Identity Protection (Span 5) -->
+                <div class="bento-card bento-col-5">
+                    <div class="bento-header">
+                        <span class="bento-badge">&#128737; Whistleblower Shield</span>
+                        <div style="font-size: 1.6rem;">&#128065;&#8205;&#128488;</div>
+                    </div>
+                    <div class="bento-title">100% Anonymous Mode</div>
+                    <p class="bento-desc">
+                        Switch to anonymous mode with one tap. Personal identifiers, phone numbers, and image EXIF metadata are cryptographically stripped before passing to enforcement squads.
+                    </p>
+                </div>
+
+                <!-- Bento Card 3: 2-Hour Flying Squad (Span 5) -->
+                <div class="bento-card bento-col-5">
+                    <div class="bento-header">
+                        <span class="bento-badge">&#9889; Enforcement Speed</span>
+                        <div style="font-size: 1.6rem;">&#128658;</div>
+                    </div>
+                    <div class="bento-title">2-Hour Rapid Raid Dispatch</div>
+                    <p class="bento-desc">
+                        Dedicated armed vigilance squads operate 24/7. When photo proof is combined with transformer energy gap telemetry, squads are dispatched within 120 minutes.
+                    </p>
+                </div>
+
+                <!-- Bento Card 4: AI Telemetry Correlation (Span 7) -->
+                <div class="bento-card bento-col-7">
+                    <div class="bento-header">
+                        <span class="bento-badge" style="color: var(--accent-cyan);">&#128270; Automated AI Reconciliation</span>
+                        <div style="font-size: 1.6rem;">&#129302;</div>
+                    </div>
+                    <div class="bento-title">Cross-Checked Against Feeder Energy Meters</div>
+                    <p class="bento-desc">
+                        Reported addresses are immediately mapped to distribution transformers (DT-01 to DT-07). The platform cross-references smart meter baseline deviations to confirm loss spikes, eliminating malicious false reports.
+                    </p>
+                </div>
+            </div>
+
+            <!-- THE CITIZEN INTERACTIVE CONSOLE -->
+            <div id="citizenConsoleSection" style="margin-top: 70px;">
+                
+                <!-- Pill Tabs -->
+                <div class="console-tabs-wrap">
+                    <div class="console-pill-tabs">
+                        <button class="console-tab-btn active" id="tabBtnReport" onclick="switchPortalTab('report')">
+                            &#9997; File Theft Report
+                        </button>
+                        <button class="console-tab-btn" id="tabBtnTrack" onclick="switchPortalTab('track')">
+                            &#128269; Live Tracking Stepper
+                        </button>
+                        <button class="console-tab-btn" id="tabBtnBounty" onclick="switchPortalTab('bounty')">
+                            &#128176; Bounty Calculator
+                        </button>
+                        <button class="console-tab-btn" id="tabBtnLegal" onclick="switchPortalTab('legal')">
+                            &#9878; Whistleblower Laws &amp; FAQs
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 1: FILE REPORT ==================== -->
+                <div id="panelReport" class="glass-console-card">
+
+                    <!-- Firebase Google Auth Gate Banner (Displayed when not signed in) -->
+                    <div id="googleAuthGateCard" style="display: none; background: linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(99, 102, 241, 0.08)); border: 1px solid rgba(66, 133, 244, 0.3); border-radius: var(--radius-xl); padding: 28px; margin-bottom: 30px; text-align: center;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: #FFF; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                            <svg width="28" height="28" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 1.3rem; font-weight: 800; color: #FFFFFF; margin-bottom: 6px;">
+                            Sign in with Google to Authenticate &amp; Claim Bounty
+                        </h3>
+                        <p style="font-size: 0.92rem; color: var(--text-dark-muted); max-width: 580px; margin: 0 auto 20px;">
+                            Authentication binds your submission to your citizen profile for secure bounty disbursement, real-time SMS tracking updates, and priority triage.
+                        </p>
+                        <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+                            <button onclick="handleCitizenFirebaseSignIn()" class="btn-pill btn-pill-dark btn-pill-lg" style="background: #FFF; color: #0A0A0C; font-weight: 700; box-shadow: 0 4px 20px rgba(255,255,255,0.25);">
+                                Continue with Google &#8594;
+                            </button>
+                            <button onclick="unlockAnonymousForm()" class="btn-pill btn-pill-outline btn-pill-lg" style="color: #FFF; border-color: rgba(255,255,255,0.2);">
+                                &#128737; Or File 100% Anonymously
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Verified Citizen Profile Strip (Shown when logged in) -->
+                    <div id="verifiedUserStrip" style="display: none; align-items: center; justify-content: space-between; background: rgba(0, 229, 153, 0.06); border: 1px solid rgba(0, 229, 153, 0.25); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 28px; flex-wrap: wrap; gap: 14px;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <div id="userAvatarCircle" style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: 0 2px 10px rgba(6, 182, 212, 0.4);">
+                                C
+                            </div>
+                            <div>
+                                <div style="font-weight: 800; color: #FFF; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                                    <span id="bannerUserName">Aarav Sharma</span>
+                                    <span style="background: var(--green); color: #0A0A0C; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: var(--radius-full);">VERIFIED CITIZEN</span>
+                                </div>
+                                <div id="bannerUserEmail" style="font-size: 0.84rem; color: var(--text-dark-muted); font-family: var(--font-mono);">
+                                    aarav.sharma@example.com
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="sample-pill" onclick="loadSampleComplaint()">
+                                &#9889; Load Sample (Karol Bagh Hooking)
+                            </div>
+                            <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 6px 14px; font-size: 0.8rem; border-color: rgba(255,255,255,0.2);">
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Complaint Form Body -->
+                    <div id="complaintFormContainer">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="font-size: 1.4rem; font-weight: 800; color: #FFF; margin-bottom: 4px;">
+                                    Confidential Vigilance Report
+                                </h3>
+                                <p style="font-size: 0.88rem; color: var(--text-dark-muted);">
+                                    All reports are timestamped and assigned an immutable tracking ticket code.
+                                </p>
+                            </div>
+                            <div class="sample-pill" onclick="loadSampleComplaint()">
+                                &#9889; Auto-Fill Sample Report
+                            </div>
+                        </div>
+
+                        <form id="complaintForm" onsubmit="handleComplaintSubmit(event)">
+                            <input type="hidden" id="googleEmailInput" name="google_email" value="">
+
+                            <!-- Anonymous Whistleblower Switch -->
+                            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-dark); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="font-size: 1.5rem;">&#128737;</div>
+                                    <div>
+                                        <div style="font-weight: 700; color: #FFF; font-size: 0.95rem;">File Anonymously (Hide My Personal Identity)</div>
+                                        <div style="font-size: 0.82rem; color: var(--text-dark-muted);">No name or phone number will be displayed on inspection dispatch orders.</div>
+                                    </div>
+                                </div>
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="anonToggle" onchange="toggleAnonymousMode(this.checked)" style="width: 18px; height: 18px; accent-color: var(--accent-cyan); cursor: pointer;">
+                                    <span style="font-size: 0.9rem; font-weight: 700; color: #FFF;">Enable Anonymous</span>
+                                </label>
+                            </div>
+
+                            <!-- Name & Phone -->
+                            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                                <div class="form-group" id="groupName">
+                                    <label class="form-label" for="compName" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Complainant Full Name</label>
+                                    <input class="form-input" type="text" id="compName" name="complainant_name" placeholder="Enter your full name" style="background: #12121A; color: #FFF; border: 1px solid rgba(255,255,255,0.15);" required>
+                                </div>
+
+                                <div class="form-group" id="groupPhone">
+                                    <label class="form-label" for="compPhone" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Contact Mobile Number (For reward SMS)</label>
+                                    <input class="form-input" type="tel" id="compPhone" name="complainant_phone" placeholder="e.g. +91 98112 45892" style="background: #12121A; color: #FFF; border: 1px solid rgba(255,255,255,0.15);" required>
+                                </div>
+                            </div>
+
+                            <!-- Location & Landmark -->
+                            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                                <div class="form-group">
+                                    <label class="form-label" for="compLocation" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">
+                                        Substation / Feeder Location <span style="color: var(--red); font-weight: bold;">*</span>
+                                    </label>
+                                    <select class="form-input" id="compLocation" name="location" required>
+                                        <option value="">-- Select Substation / Neighborhood --</option>
+                                        <option value="Karol Bagh Market Road, Block 4">Karol Bagh (Near DT-04 Commercial)</option>
+                                        <option value="Civil Lines, Near Metro Pillar 82">Civil Lines (Near DT-02 Feeder)</option>
+                                        <option value="Sector 62, Block C Market">Sector 62 (Near DT-01 Substation)</option>
+                                        <option value="MG Road Market, Main Bazaar">MG Road (Near DT-06 Market)</option>
+                                        <option value="Industrial Area Phase 2">Industrial Area (Near DT-03)</option>
+                                        <option value="Dwarka Sector 7">Dwarka Sector 7 (Near DT-05)</option>
+                                        <option value="Rohini Sector 3">Rohini Sector 3 (Near DT-07)</option>
+                                        <option value="Custom Location">Other Delhi NCR Location</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="compLandmark" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Specific Landmark / Pole or Meter #</label>
+                                    <input class="form-input" type="text" id="compLandmark" name="landmark" placeholder="e.g. Pole #14 behind Shop 18, or near meter M009" style="background: #12121A; color: #FFF; border: 1px solid rgba(255,255,255,0.15);">
+                                </div>
+                            </div>
+
+                            <!-- Theft Type -->
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label class="form-label" for="compType" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">
+                                    Nature of Electricity Theft / Tampering <span style="color: var(--red); font-weight: bold;">*</span>
+                                </label>
+                                <select class="form-input" id="compType" name="theft_type" required>
+                                    <option value="">-- Select Theft Modality --</option>
+                                    <option value="Direct Hooking (Katia Wire)">Direct Hooking / Katia Wire on Overhead Lines</option>
+                                    <option value="Meter Bypass / Shunt Wire">Meter Terminal Bypass / External Copper Jumper</option>
+                                    <option value="Meter Seal Broken / Cover Tampered">Meter Lead Seal Broken / Enclosure Tampered</option>
+                                    <option value="Neodymium Magnet Tampering">Neodymium Magnet Placed on Smart Meter</option>
+                                    <option value="Buried Underground Cable Tapping">Underground Service Cable Tapping</option>
+                                    <option value="Commercial Heavy Load Diversion">Unmetered Commercial / Industrial Machinery Load</option>
+                                    <option value="Other Anomaly">Other Unauthorized Grid Connection</option>
+                                </select>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="form-group" style="margin-bottom: 24px;">
+                                <label class="form-label" for="compDesc" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Incident Details &amp; Operational Timings</label>
+                                <textarea class="form-input" id="compDesc" name="description" rows="3" placeholder="Describe the theft setup (e.g. hooked wire turns on every evening at 8 PM feeding cooling equipment or workshops)..." style="background: #12121A; color: #FFF; border: 1px solid rgba(255,255,255,0.15);" required></textarea>
+                            </div>
+
+                            <!-- Photo Upload Dropzone -->
+                            <div class="form-group" style="margin-bottom: 30px;">
+                                <label class="form-label" style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">
+                                    Upload Photo Evidence (Accelerates Raid Squad Dispatch)
+                                </label>
+                                <div id="dropzone" class="upload-dropzone" onclick="document.getElementById('fileInput').click()">
+                                    <div class="dropzone-icon">&#128248;</div>
+                                    <div style="font-weight: 700; color: #FFF; font-size: 1.05rem;">Click or Drag &amp; Drop Photo Evidence Here</div>
+                                    <div style="color: var(--text-dark-muted); font-size: 0.85rem; margin-top: 6px;">
+                                        Supports JPG, PNG, WEBP (Max 10MB). Geotagged photos automatically expedite triage.
+                                    </div>
+                                    <input type="file" id="fileInput" name="photo" accept="image/*" style="display: none;" onchange="handleFileSelect(this)">
+                                    <div id="previewContainer" class="preview-container" style="display: none;" onclick="event.stopPropagation()">
+                                        <img id="previewImg" class="preview-img" src="" alt="Evidence Preview">
+                                        <button type="button" class="preview-remove-btn" onclick="clearSelectedFile()" title="Remove Image">&times;</button>
+                                        <div id="previewName" style="margin-top: 8px; font-size: 0.82rem; color: var(--accent-cyan); font-family: var(--font-mono);"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div style="text-align: right;">
+                                <button type="submit" id="submitBtn" class="btn-pill btn-pill-dark btn-pill-lg" style="background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; box-shadow: 0 4px 20px rgba(6, 182, 212, 0.35); border: none; font-weight: 700; padding: 14px 36px;">
+                                    <span id="btnText">Submit Vigilance Report &#8599;</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Success Confirmation Card -->
+                    <div id="successCard" style="display: none; background: rgba(0, 229, 153, 0.08); border: 1px solid var(--green); border-radius: var(--radius-xl); padding: 36px; margin-top: 28px; text-align: center;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--green); color: #0A0A0C; font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                            &#10004;
+                        </div>
+                        <h3 style="font-size: 1.5rem; font-weight: 800; color: #FFF; margin-bottom: 8px;">
+                            Report Successfully Registered
+                        </h3>
+                        <p style="color: var(--text-dark-body); font-size: 0.95rem; max-width: 500px; margin: 0 auto 18px;">
+                            Your tip has been forwarded to the DISCOM central surveillance queue and correlated with distribution transformer energy balances.
+                        </p>
+                        <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 14px 24px; display: inline-flex; align-items: center; gap: 14px; margin-bottom: 24px;">
+                            <span style="font-size: 0.85rem; color: var(--text-dark-muted); text-transform: uppercase;">Tracking Ticket ID:</span>
+                            <span id="issuedTicketId" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 800; color: var(--accent-cyan);">CIT-2026-XXXX</span>
+                            <button onclick="copyTicketId()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 4px 10px; font-size: 0.75rem;">
+                                Copy
+                            </button>
+                        </div>
+                        <div>
+                            <button onclick="trackIssuedTicket()" class="btn-pill btn-pill-dark btn-pill-md" style="background: #FFF; color: #0A0A0C; font-weight: 700;">
+                                Track Complaint Live &#8594;
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ==================== TAB 2: LIVE TRACKING ==================== -->
+                <div id="panelTrack" class="glass-console-card" style="display: none;">
+                    <div style="margin-bottom: 28px;">
+                        <h3 style="font-size: 1.4rem; font-weight: 800; color: #FFF; margin-bottom: 6px;">
+                            Live Complaint Status &amp; Stepper
+                        </h3>
+                        <p style="font-size: 0.9rem; color: var(--text-dark-muted);">
+                            Enter your confidential ticket ID to inspect stage-by-stage enforcement logs and evidence verification.
+                        </p>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <input class="form-input" type="text" id="trackInput" placeholder="Enter Ticket ID (e.g. CIT-2026-8942)" style="flex: 1; min-width: 260px; font-family: var(--font-mono); font-size: 1rem; background: #12121A; color: #FFF; border: 1px solid rgba(255,255,255,0.18);">
+                        <button onclick="fetchComplaintTracking()" class="btn-pill btn-pill-dark btn-pill-lg" style="background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; border: none; font-weight: 700; padding: 12px 28px;">
+                            Track Status &#8599;
+                        </button>
+                    </div>
+
+                    <!-- Quick Sample Pills -->
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 30px;">
+                        <span style="font-size: 0.8rem; color: var(--text-dark-muted);">Demo Samples:</span>
+                        <div class="sample-pill" onclick="quickTrack('CIT-2026-8942')">
+                            &#9889; CIT-2026-8942 (Active Raid Dispatched)
+                        </div>
+                        <div class="sample-pill" onclick="quickTrack('CIT-2026-5120')">
+                            &#10004; CIT-2026-5120 (Resolved &amp; Penalized)
+                        </div>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="trackLoading" style="display: none; text-align: center; padding: 40px;">
+                        <div style="font-size: 1.1rem; color: var(--accent-cyan); font-weight: 600;">
+                            &#9889; Querying Central DISCOM Vigilance Server...
+                        </div>
+                    </div>
+
+                    <!-- Error Notice -->
+                    <div id="trackError" style="display: none; background: rgba(255, 45, 85, 0.1); border: 1px solid var(--red); border-radius: var(--radius-md); padding: 18px 24px; color: #FFF; margin-bottom: 24px;">
+                        <strong>Error:</strong> <span id="trackErrorMsg">Ticket ID not found.</span>
+                    </div>
+
+                    <!-- Result Card -->
+                    <div id="trackResult" style="display: none;">
+                        <!-- Overview Header -->
+                        <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-xl); padding: 26px; margin-bottom: 28px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                                        <span id="trackTicketCode" style="font-family: var(--font-mono); font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan);">CIT-2026-8942</span>
+                                        <span id="trackBadge" class="badge-citizen-status badge-theft-suspicious">UNDER INVESTIGATION</span>
+                                    </div>
+                                    <div id="trackDate" style="font-size: 0.82rem; color: var(--text-dark-muted); font-family: var(--font-mono);">
+                                        Reported: 11 Sep 2026, 18:30
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Reporting Identity:</div>
+                                    <div id="trackAnonText" style="font-weight: 700; color: #FFF; font-size: 0.92rem;">Aarav Sharma</div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-dark);">
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase;">Theft Nature:</div>
+                                    <div id="trackTheftType" style="font-weight: 700; color: #FFF; font-size: 0.95rem; margin-top: 2px;">Direct Hooking</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase;">Location:</div>
+                                    <div id="trackLocation" style="font-weight: 700; color: #FFF; font-size: 0.95rem; margin-top: 2px;">Karol Bagh</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase;">Assigned Team:</div>
+                                    <div id="trackTeam" style="font-weight: 700; color: var(--accent-cyan); font-size: 0.95rem; margin-top: 2px;">Central Flying Squad</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 16px;">
+                                <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase;">Landmark / Pole:</div>
+                                <div id="trackLandmarkText" style="color: var(--text-dark-body); font-size: 0.9rem; margin-top: 2px;">Near pole #14</div>
+                            </div>
+
+                            <div style="margin-top: 12px;">
+                                <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase;">Description:</div>
+                                <div id="trackDescText" style="color: var(--text-dark-body); font-size: 0.9rem; margin-top: 2px;">Details...</div>
+                            </div>
+
+                            <div style="margin-top: 14px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: var(--radius-md); border-left: 3px solid var(--accent-cyan);">
+                                <div style="font-size: 0.75rem; color: var(--accent-cyan); text-transform: uppercase; font-weight: 700;">Inspector Log Remarks:</div>
+                                <div id="trackRemarks" style="color: #FFF; font-size: 0.9rem; margin-top: 2px;">Awaiting inspection.</div>
+                            </div>
+
+                            <!-- Photo Evidence Display -->
+                            <div id="trackPhotoBox" style="display: none; margin-top: 20px;">
+                                <div style="font-size: 0.75rem; color: var(--text-dark-muted); text-transform: uppercase; margin-bottom: 8px;">Uploaded Geotagged Evidence:</div>
+                                <img id="trackPhotoImg" src="" alt="Evidence photo" style="max-height: 200px; border-radius: var(--radius-md); border: 1px solid var(--border-dark); object-fit: cover;">
+                            </div>
+                        </div>
+
+                        <!-- 5-Stage Stepper Container -->
+                        <div style="margin-top: 36px;">
+                            <h4 style="font-size: 1.15rem; font-weight: 800; color: #FFF; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
+                                &#128640; 5-Stage Vigilance Enforcement Progress
+                            </h4>
+                            <div class="stepper-wrap" id="timelineContainer">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 3: BOUNTY CALCULATOR ==================== -->
+                <div id="panelBounty" class="glass-console-card" style="display: none;">
+                    <div style="margin-bottom: 24px;">
+                        <span class="bento-badge" style="background: rgba(0,229,153,0.1); color: var(--green); border-color: rgba(0,229,153,0.3); margin-bottom: 12px;">&#8377; Statutory Citizen Payouts</span>
+                        <h3 style="font-size: 1.6rem; font-weight: 800; color: #FFF; margin-top: 10px;">
+                            Vigilance Bounty Calculator &amp; Payout Policy
+                        </h3>
+                        <p style="font-size: 0.92rem; color: var(--text-dark-muted); max-width: 680px;">
+                            Under Section 135 Whistleblower Scheme, informants receive 10% of compounding theft penalty recovered by the state utility. Calculate your expected reward based on unmetered commercial equipment load.
+                        </p>
+                    </div>
+
+                    <div class="calc-box">
+                        <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+                            <div>
+                                <label style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Suspected Commercial Establishment Type:</label>
+                                <select id="calcType" class="form-input" onchange="runBountyCalculator()">
+                                    <option value="15">Heavy Textile / Dyeing Unit (Est. 15 kW unmetered)</option>
+                                    <option value="8">Commercial Bakery / Commercial Refrigeration (Est. 8 kW)</option>
+                                    <option value="25">Industrial CNC / Metal Workshop (Est. 25 kW)</option>
+                                    <option value="50">Large Fabrication / Injection Molding (Est. 50 kW)</option>
+                                    <option value="5">Retail Supermarket / Air Conditioning Bypass (Est. 5 kW)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color: #F8FAFC; font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Tapping Duration (Estimated Months):</label>
+                                <select id="calcMonths" class="form-input" onchange="runBountyCalculator()">
+                                    <option value="3">3 Months (Standard Assessment)</option>
+                                    <option value="6" selected>6 Months (Severe Assessment)</option>
+                                    <option value="12">12 Months (Statutory Maximum Assessment)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="calc-metric-grid">
+                            <div class="calc-metric-card">
+                                <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Estimated Power Stolen</div>
+                                <div id="calcEnergy" class="calc-metric-val" style="color: #FFF;">14,400 kWh</div>
+                            </div>
+                            <div class="calc-metric-card">
+                                <div style="font-size: 0.78rem; color: var(--text-dark-muted); text-transform: uppercase;">Compounded Penalty Assessed</div>
+                                <div id="calcPenalty" class="calc-metric-val" style="color: var(--yellow);">&#8377;2,88,000</div>
+                            </div>
+                            <div class="calc-metric-card" style="background: rgba(0, 229, 153, 0.08); border-color: rgba(0, 229, 153, 0.3);">
+                                <div style="font-size: 0.78rem; color: var(--green); text-transform: uppercase; font-weight: 700;">Your 10% Citizen Bounty</div>
+                                <div id="calcReward" class="calc-metric-val" style="color: var(--green);">&#8377;28,800</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Disbursed Payouts Ticker -->
+                    <div style="margin-top: 36px;">
+                        <h4 style="font-size: 1.1rem; font-weight: 800; color: #FFF; margin-bottom: 16px;">
+                            &#128203; Recent Confirmed Bounty Releases (Delhi NCR)
+                        </h4>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <span style="font-family: var(--font-mono); color: var(--accent-cyan); font-weight: 700;">CIT-2026-4412</span>
+                                    <span style="color: var(--text-dark-muted); font-size: 0.88rem; margin-left: 10px;">Industrial Area Phase 2 &bull; 35kW Underground Tap</span>
+                                </div>
+                                <div style="font-family: var(--font-mono); font-weight: 800; color: var(--green);">&#8377;42,500 Disbursed via UPI</div>
+                            </div>
+                            <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <span style="font-family: var(--font-mono); color: var(--accent-cyan); font-weight: 700;">CIT-2026-5120</span>
+                                    <span style="color: var(--text-dark-muted); font-size: 0.88rem; margin-left: 10px;">Karol Bagh Commercial &bull; Katia Wire on Feeder DT-04</span>
+                                </div>
+                                <div style="font-family: var(--font-mono); font-weight: 800; color: var(--green);">&#8377;18,200 Disbursed via Bank NEFT</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 4: LEGAL & FAQS ==================== -->
+                <div id="panelLegal" class="glass-console-card" style="display: none;">
+                    <div style="margin-bottom: 28px;">
+                        <span class="bento-badge" style="background: rgba(99,102,241,0.1); color: var(--accent-electric); border-color: rgba(99,102,241,0.3); margin-bottom: 12px;">&#9878; Electricity Act 2003</span>
+                        <h3 style="font-size: 1.6rem; font-weight: 800; color: #FFF; margin-top: 10px;">
+                            Statutory Legal Protections &amp; Whistleblower Immunity
+                        </h3>
+                        <p style="font-size: 0.92rem; color: var(--text-dark-muted); max-width: 680px;">
+                            Reporting power theft is an official civic duty protected under Indian Central Electricity legislation. Read your statutory rights and how your privacy is safeguarded.
+                        </p>
+                    </div>
+
+                    <!-- Law highlights grid -->
+                    <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 36px;">
+                        <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-lg); padding: 24px;">
+                            <div style="color: var(--accent-cyan); font-weight: 800; font-size: 1.1rem; margin-bottom: 8px;">Section 135 — Theft of Electricity</div>
+                            <p style="font-size: 0.88rem; color: var(--text-dark-muted); line-height: 1.6;">
+                                Defines criminal penalties up to 3 years imprisonment and compounding fines up to three times the financial damage for any direct tapping, tampering, or unauthorized diversion.
+                            </p>
+                        </div>
+                        <div style="background: var(--bg-dark-surface); border: 1px solid var(--border-dark); border-radius: var(--radius-lg); padding: 24px;">
+                            <div style="color: var(--green); font-weight: 800; font-size: 1.1rem; margin-bottom: 8px;">Section 150 — Whistleblower Immunity</div>
+                            <p style="font-size: 0.88rem; color: var(--text-dark-muted); line-height: 1.6;">
+                                Provides legal protection ensuring informants cannot be subjected to harassment, defamation suits, or retaliatory complaints by apprehended theft offenders.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- FAQs Accordions -->
+                    <h4 style="font-size: 1.2rem; font-weight: 800; color: #FFF; margin-bottom: 16px;">
+                        Frequently Asked Questions
+                    </h4>
+
+                    <div class="faq-item open" onclick="toggleFaq(this)">
+                        <div class="faq-question">
+                            <span>Will the person I report ever know my identity?</span>
+                            <span class="faq-chevron">&#9660;</span>
+                        </div>
+                        <div class="faq-answer">
+                            <strong>Absolutely not.</strong> Under DISCOM Vigilance SOP, raid orders provided to enforcement officers and police teams redact all complainant identifiers. If you choose 'Anonymous Mode', no identifying information is even recorded in the raid docket.
+                        </div>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-question">
+                            <span>How is the cash reward calculated and paid?</span>
+                            <span class="faq-chevron">&#9660;</span>
+                        </div>
+                        <div class="faq-answer">
+                            The reward is fixed at 10% of the compounding penalty realized from the offender (subject to a minimum of &#8377;5,000 and maximum of &#8377;50,000 per case). The bounty is credited directly to your bank account or verified UPI ID within 14 business days of penalty recovery.
+                        </div>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-question">
+                            <span>What kind of photo evidence gives the highest priority?</span>
+                            <span class="faq-chevron">&#9660;</span>
+                        </div>
+                        <div class="faq-answer">
+                            Clear, daylight or illuminated photos showing: (1) The hooked wire connecting to overhead mains, (2) The meter terminal or bypassed service cable, (3) A nearby landmark, shop signage, or electric pole number. Geotagged images enable dispatch within 2 hours.
+                        </div>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-question">
+                            <span>What happens if I make an honest mistake about a location?</span>
+                            <span class="faq-chevron">&#9660;</span>
+                        </div>
+                        <div class="faq-answer">
+                            Citizen reports are always cross-checked with smart meter telemetry and distribution transformer energy balances before raid teams are sent. You are protected from any liability for honest reports made in good faith.
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- NexStudio Clean Modern Footer -->
+    <footer class="nex-footer" style="background: var(--bg-dark-surface); border-top: 1px solid var(--border-dark); padding: 50px 24px 30px; margin-top: auto;">
+        <div style="max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 36px; padding-bottom: 36px; border-bottom: 1px solid var(--border-dark);">
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                    <div style="font-size: 1.6rem; color: var(--accent-cyan);">&#9889;</div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: #FFF;">Watt's <span style="color: var(--accent-cyan);">Off</span></div>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-dark-muted); line-height: 1.6;">
+                    AI-powered smart grid surveillance and citizen vigilance intelligence platform for electricity loss reduction and grid safety.
+                </p>
+                <div style="margin-top: 16px; font-size: 0.85rem; color: #FFF; font-weight: 700;">
+                    24x7 Toll-Free Vigilance Helpline: <span style="color: var(--accent-cyan); font-family: var(--font-mono);">1912</span>
+                </div>
+            </div>
+
+            <div>
+                <h5 style="color: #FFF; font-size: 0.95rem; font-weight: 700; margin-bottom: 16px;">Citizen Quick Links</h5>
+                <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; color: var(--text-dark-muted);">
+                    <li><a href="#report-section" onclick="switchPortalTab('report')" style="color: var(--text-dark-muted);">File Theft Report</a></li>
+                    <li><a href="#track-section" onclick="switchPortalTab('track')" style="color: var(--text-dark-muted);">Live Ticket Stepper</a></li>
+                    <li><a href="#bounty-section" onclick="switchPortalTab('bounty')" style="color: var(--text-dark-muted);">Bounty Calculator</a></li>
+                    <li><a href="#legal-section" onclick="switchPortalTab('legal')" style="color: var(--text-dark-muted);">Whistleblower Law FAQ</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h5 style="color: #FFF; font-size: 0.95rem; font-weight: 700; margin-bottom: 16px;">DISCOM Officer Portal</h5>
+                <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; color: var(--text-dark-muted);">
+                    <li><a href="/static/dashboard.html" style="color: var(--text-dark-muted);">Officer Surveillance Dashboard &#8599;</a></li>
+                    <li><a href="/static/analysis.html" style="color: var(--text-dark-muted);">Baseline Deviation Analysis</a></li>
+                    <li><a href="/static/alerts.html" style="color: var(--text-dark-muted);">Raid Dispatch Queue</a></li>
+                    <li><a href="/static/map.html" style="color: var(--text-dark-muted);">Geospatial Theft Map</a></li>
+                    <li><a href="/static/login.html" style="color: var(--accent-cyan); font-weight: 700;">Officer Sign In &#8599;</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="max-width: 1140px; margin: 24px auto 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 0.82rem; color: var(--text-dark-muted);">
+            <div>&copy; 2026 Watt's Off &mdash; AI Grid Intelligence. Empowering citizens against power theft.</div>
+            <div style="display: flex; gap: 20px;">
+                <span style="color: var(--green);">&#9679; Vigilance Squads Active</span>
+                <span>Electricity Act 2003 Compliant</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive JavaScript Logic -->
+    <script>
+        let selectedFile = null;
+
+        // Unlock anonymous reporting mode if user chooses to bypass login
+        function unlockAnonymousForm() {
+            document.getElementById('googleAuthGateCard').style.display = 'none';
+            document.getElementById('complaintFormContainer').style.display = 'block';
+            document.getElementById('anonToggle').checked = true;
+            toggleAnonymousMode(true);
+        }
+
+        // Check Firebase Google Auth status and toggle UI
+        function checkFirebaseGoogleAuth() {
+            const isAuth = sessionStorage.getItem('wattsoff_google_auth') === 'true';
+            const name = sessionStorage.getItem('wattsoff_citizen_name') || 'Google Citizen';
+            const email = sessionStorage.getItem('wattsoff_citizen_email') || '';
+
+            const gateCard = document.getElementById('googleAuthGateCard');
+            const formContainer = document.getElementById('complaintFormContainer');
+            const verifiedStrip = document.getElementById('verifiedUserStrip');
+            const navBadge = document.getElementById('navUserBadge');
+            const navSignInBtn = document.getElementById('navSignInBtn');
+
+            if (isAuth) {
+                // User is authenticated via Firebase -> Unlock complaint form
+                if (gateCard) gateCard.style.display = 'none';
+                if (formContainer) formContainer.style.display = 'block';
+                if (verifiedStrip) verifiedStrip.style.display = 'flex';
+
+                // Update citizen banner & pre-fill verified name
+                document.getElementById('bannerUserName').textContent = name;
+                document.getElementById('bannerUserEmail').textContent = email;
+                document.getElementById('userAvatarCircle').textContent = name.charAt(0).toUpperCase();
+                document.getElementById('googleEmailInput').value = email;
+
+                if (!document.getElementById('anonToggle').checked) {
+                    document.getElementById('compName').value = name;
+                }
+
+                // Update nav user badge
+                if (navBadge) navBadge.style.display = 'inline-flex';
+                document.getElementById('navUserName').textContent = name.split(' ')[0];
+                document.getElementById('navAvatar').textContent = name.charAt(0).toUpperCase();
+                if (navSignInBtn) navSignInBtn.style.display = 'none';
+            } else {
+                // User is NOT authenticated
+                if (verifiedStrip) verifiedStrip.style.display = 'none';
+                if (navBadge) navBadge.style.display = 'none';
+                if (navSignInBtn) navSignInBtn.style.display = 'inline-flex';
+
+                // Check if user has already unlocked anonymous form
+                if (document.getElementById('anonToggle') && document.getElementById('anonToggle').checked) {
+                    if (gateCard) gateCard.style.display = 'none';
+                    if (formContainer) formContainer.style.display = 'block';
+                } else {
+                    if (gateCard) gateCard.style.display = 'block';
+                    if (formContainer) formContainer.style.display = 'none';
+                }
+            }
+        }
+
+        // Handle Firebase Google Sign-In
+        async function handleCitizenFirebaseSignIn() {
+            try {
+                const res = await signInWithGoogleFirebase();
+                if (res && res.success) {
+                    checkFirebaseGoogleAuth();
+                }
+            } catch (err) {
+                console.error("[Firebase Auth] Error:", err);
+                alert("Firebase Google Sign-In failed: " + (err.message || err));
+            }
+        }
+
+        // Handle Firebase Sign-Out
+        async function handleCitizenFirebaseSignOut() {
+            await signOutFirebase();
+            document.getElementById('complaintForm').reset();
+            clearSelectedFile();
+            checkFirebaseGoogleAuth();
+        }
+
+        // Switch between Portal Tabs (Report, Track, Bounty, Legal)
+        function switchPortalTab(tabName) {
+            const panels = {
+                'report': document.getElementById('panelReport'),
+                'track': document.getElementById('panelTrack'),
+                'bounty': document.getElementById('panelBounty'),
+                'legal': document.getElementById('panelLegal')
+            };
+            const buttons = {
+                'report': document.getElementById('tabBtnReport'),
+                'track': document.getElementById('tabBtnTrack'),
+                'bounty': document.getElementById('tabBtnBounty'),
+                'legal': document.getElementById('tabBtnLegal')
+            };
+
+            Object.keys(panels).forEach(key => {
+                if (panels[key]) panels[key].style.display = (key === tabName) ? 'block' : 'none';
+                if (buttons[key]) {
+                    if (key === tabName) buttons[key].classList.add('active');
+                    else buttons[key].classList.remove('active');
+                }
+            });
+
+            if (tabName === 'report') {
+                checkFirebaseGoogleAuth();
+            } else if (tabName === 'track') {
+                const trackInputVal = document.getElementById('trackInput').value.trim();
+                if (trackInputVal && document.getElementById('trackResult').style.display === 'none') {
+                    fetchComplaintTracking();
+                }
+            } else if (tabName === 'bounty') {
+                runBountyCalculator();
+            }
+        }
+
+        // Toggle anonymous reporting mode
+        function toggleAnonymousMode(isAnon) {
+            const groupName = document.getElementById('groupName');
+            const groupPhone = document.getElementById('groupPhone');
+            const compName = document.getElementById('compName');
+            const compPhone = document.getElementById('compPhone');
+
+            if (isAnon) {
+                groupName.style.opacity = '0.45';
+                groupPhone.style.opacity = '0.45';
+                compName.required = false;
+                compPhone.required = false;
+                compName.value = 'Anonymous Whistleblower';
+                compPhone.value = '';
+                compName.disabled = true;
+                compPhone.disabled = true;
+            } else {
+                groupName.style.opacity = '1';
+                groupPhone.style.opacity = '1';
+                compName.required = true;
+                compPhone.required = true;
+                compName.value = sessionStorage.getItem('wattsoff_citizen_name') || '';
+                compName.disabled = false;
+                compPhone.disabled = false;
+            }
+        }
+
+        // File drop & select handling
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('previewName').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                    document.getElementById('previewContainer').style.display = 'inline-block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function clearSelectedFile() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('previewContainer').style.display = 'none';
+            document.getElementById('previewImg').src = '';
+        }
+
+        // Drag and drop events for dropzone
+        const dropzone = document.getElementById('dropzone');
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('dragover');
+                }, false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('dragover');
+                }, false);
+            });
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length) {
+                    document.getElementById('fileInput').files = files;
+                    handleFileSelect(document.getElementById('fileInput'));
+                }
+            });
+        }
+
+        // Fill sample complaint for easy demo
+        function loadSampleComplaint() {
+            // Unlock form if locked
+            unlockAnonymousForm();
+            document.getElementById('anonToggle').checked = false;
+            toggleAnonymousMode(false);
+
+            document.getElementById('compName').value = sessionStorage.getItem('wattsoff_citizen_name') || 'Aarav Sharma';
+            document.getElementById('compPhone').value = '+91 98101 23456';
+            document.getElementById('compLocation').value = 'Karol Bagh Market Road, Block 4';
+            document.getElementById('compLandmark').value = 'Near pole #14 behind DT-04 Karol Bagh Transformer';
+            document.getElementById('compType').value = 'Direct Hooking (Katia Wire)';
+            document.getElementById('compDesc').value = 'Thick black 3-phase cables tapped directly into the low tension overhead distribution box to power unmetered commercial textile ironers every evening after 7 PM.';
+        }
+
+        // Handle complaint form submission
+        async function handleComplaintSubmit(e) {
+            e.preventDefault();
+
+            const isAuth = sessionStorage.getItem('wattsoff_google_auth') === 'true';
+            const isAnon = document.getElementById('anonToggle').checked;
+
+            // If not logged in and not explicitly in anonymous mode, trigger sign in
+            if (!isAuth && !isAnon) {
+                handleCitizenFirebaseSignIn();
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            btnText.innerHTML = '<span class="loading-spinner" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:8px;"></span> Submitting Report...';
+            submitBtn.disabled = true;
+
+            const formData = new FormData(document.getElementById('complaintForm'));
+            formData.set('is_anonymous', isAnon ? 'true' : 'false');
+            formData.set('google_email', sessionStorage.getItem('wattsoff_citizen_email') || '');
+
+            try {
+                const response = await fetch('/api/citizen/complaints', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    document.getElementById('issuedTicketId').textContent = data.ticket_id;
+                    document.getElementById('successCard').style.display = 'block';
+                    document.getElementById('complaintForm').reset();
+                    clearSelectedFile();
+                    // Restore Firebase user name if available
+                    if (sessionStorage.getItem('wattsoff_citizen_name')) {
+                        document.getElementById('compName').value = sessionStorage.getItem('wattsoff_citizen_name');
+                    }
+                    document.getElementById('successCard').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Error filing complaint: ' + (data.error || 'Server error'));
+                }
+            } catch (err) {
+                console.error('Submission error:', err);
+                alert('Network error while filing complaint. Please try again.');
+            } finally {
+                btnText.textContent = 'Submit Vigilance Report ↗';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function copyTicketId() {
+            const ticketId = document.getElementById('issuedTicketId').textContent;
+            navigator.clipboard.writeText(ticketId).then(() => {
+                alert('Tracking Ticket ID copied to clipboard: ' + ticketId);
+            });
+        }
+
+        function trackIssuedTicket() {
+            const ticketId = document.getElementById('issuedTicketId').textContent;
+            document.getElementById('trackInput').value = ticketId;
+            switchPortalTab('track');
+            fetchComplaintTracking();
+        }
+
+        function quickTrack(ticketId) {
+            document.getElementById('trackInput').value = ticketId;
+            switchPortalTab('track');
+            fetchComplaintTracking();
+        }
+
+        // Fetch complaint tracking detail
+        async function fetchComplaintTracking() {
+            const ticketId = document.getElementById('trackInput').value.trim();
+            if (!ticketId) return;
+
+            const loading = document.getElementById('trackLoading');
+            const result = document.getElementById('trackResult');
+            const errorBox = document.getElementById('trackError');
+
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            errorBox.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/citizen/complaints/${encodeURIComponent(ticketId)}`);
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    document.getElementById('trackErrorMsg').textContent = errData.error || `Ticket ${ticketId} not found.`;
+                    errorBox.style.display = 'block';
+                    return;
+                }
+
+                const data = await res.json();
+                renderTrackingDetail(data);
+            } catch (err) {
+                console.error('Track error:', err);
+                document.getElementById('trackErrorMsg').textContent = 'Failed to connect to vigilance tracking service.';
+                errorBox.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Render Tracking Detail & Stepper
+        function renderTrackingDetail(c) {
+            const result = document.getElementById('trackResult');
+            result.style.display = 'block';
+
+            // Top overview
+            document.getElementById('trackTicketCode').textContent = c.ticket_id;
+            document.getElementById('trackTheftType').textContent = c.theft_type;
+            document.getElementById('trackLocation').textContent = c.location;
+            document.getElementById('trackTeam').textContent = c.assigned_team || 'Central Vigilance Squad';
+            document.getElementById('trackRemarks').textContent = c.remarks || 'Under routine vigilance assessment.';
+            document.getElementById('trackLandmarkText').textContent = c.landmark || 'Not specified';
+            document.getElementById('trackDescText').textContent = c.description || 'No description provided';
+            document.getElementById('trackAnonText').textContent = c.is_anonymous ? 'Anonymous Whistleblower' : (c.complainant_name || 'Citizen Informant');
+
+            // Format date
+            const created = new Date(c.created_at);
+            document.getElementById('trackDate').textContent = 'Reported: ' + created.toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            // Status badge
+            const badge = document.getElementById('trackBadge');
+            badge.className = 'badge-citizen-status';
+            if (c.status === 'RESOLVED') {
+                badge.classList.add('badge-theft-normal');
+                badge.textContent = 'RESOLVED / PENALIZED';
+            } else if (c.status === 'DISPATCHED') {
+                badge.classList.add('badge-theft-high');
+                badge.textContent = 'RAID SQUAD DISPATCHED';
+            } else {
+                badge.classList.add('badge-theft-suspicious');
+                badge.textContent = 'UNDER INVESTIGATION';
+            }
+
+            // Photo preview
+            const photoBox = document.getElementById('trackPhotoBox');
+            const photoImg = document.getElementById('trackPhotoImg');
+            if (c.photo_url) {
+                photoImg.src = c.photo_url;
+                photoBox.style.display = 'block';
+            } else {
+                photoBox.style.display = 'none';
+            }
+
+            // Render 5-stage timeline stepper
+            const timelineContainer = document.getElementById('timelineContainer');
+            timelineContainer.innerHTML = '';
+
+            const timeline = c.timeline || [];
+            timeline.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `stepper-item ${item.status}`;
+
+                let iconContent = item.stage;
+                if (item.status === 'completed') {
+                    iconContent = '&#10004;';
+                } else if (item.status === 'active') {
+                    iconContent = '&#9889;';
+                }
+
+                let timeHtml = '';
+                if (item.timestamp) {
+                    const dt = new Date(item.timestamp);
+                    timeHtml = `<div class="stepper-time">&#128340; ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; ${dt.toLocaleDateString()}</div>`;
+                } else if (item.status === 'active') {
+                    timeHtml = `<div class="stepper-time" style="color: var(--accent-electric);">&#9889; Active Stage in Progress</div>`;
+                }
+
+                itemDiv.innerHTML = `
+                    <div class="stepper-line"></div>
+                    <div class="stepper-icon">${iconContent}</div>
+                    <div class="stepper-content">
+                        <div class="stepper-title">
+                            ${item.title}
+                            ${item.status === 'completed' ? '<span style="color:var(--green); font-size:0.8rem;">(Completed)</span>' : ''}
+                            ${item.status === 'active' ? '<span style="color:var(--accent-electric); font-size:0.8rem; font-weight:700;">(Active Stage)</span>' : ''}
+                        </div>
+                        <div class="stepper-desc">${item.desc}</div>
+                        ${timeHtml}
+                    </div>
+                `;
+
+                timelineContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Bounty Calculator Function
+        function runBountyCalculator() {
+            const kw = parseFloat(document.getElementById('calcType').value) || 15;
+            const months = parseFloat(document.getElementById('calcMonths').value) || 6;
+
+            // 8 hours per day x 30 days x months x kW
+            const units = Math.round(kw * 8 * 30 * months);
+            // Commercial tariff ~ ₹10/kWh + 2x statutory compounding penalty under Section 135
+            const penalty = Math.round(units * 10 * 2);
+            // 10% citizen bounty capped between ₹5,000 and ₹50,000
+            let reward = Math.round(penalty * 0.10);
+            if (reward < 5000) reward = 5000;
+            if (reward > 50000) reward = 50000;
+
+            document.getElementById('calcEnergy').textContent = units.toLocaleString('en-IN') + ' kWh';
+            document.getElementById('calcPenalty').textContent = '₹' + penalty.toLocaleString('en-IN');
+            document.getElementById('calcReward').textContent = '₹' + reward.toLocaleString('en-IN');
+        }
+
+        // FAQ Toggle
+        function toggleFaq(el) {
+            el.classList.toggle('open');
+        }
+
+        // NexStudio 3D Holographic Particle Mesh in Canvas
+        function initCitizenThreeScene() {
+            const canvas = document.getElementById('citizenThreeCanvas');
+            if (!canvas || !window.THREE) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            camera.position.z = 24;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Grid plane particles
+            const particlesGeo = new THREE.BufferGeometry();
+            const count = 1800;
+            const posArray = new Float32Array(count * 3);
+            const colorArray = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                posArray[i] = (Math.random() - 0.5) * 45;
+                posArray[i + 1] = (Math.random() - 0.5) * 25;
+                posArray[i + 2] = (Math.random() - 0.5) * 20;
+
+                // Alternate between cyan (#06B6D4) and indigo (#6366F1)
+                if (Math.random() > 0.5) {
+                    colorArray[i] = 0.02; colorArray[i+1] = 0.71; colorArray[i+2] = 0.83;
+                } else {
+                    colorArray[i] = 0.38; colorArray[i+1] = 0.40; colorArray[i+2] = 0.94;
+                }
+            }
+
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const particlesMat = new THREE.PointsMaterial({
+                size: 0.18,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.85
+            });
+
+            const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+            scene.add(particleSystem);
+
+            // Connective power line web
+            const linesGeo = new THREE.BufferGeometry();
+            const linePositions = [];
+            for (let i = 0; i < 60; i++) {
+                linePositions.push(
+                    (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10
+                );
+            }
+            linesGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            const linesMat = new THREE.LineBasicMaterial({
+                color: 0x06B6D4,
+                transparent: true,
+                opacity: 0.25
+            });
+            const lineSegments = new THREE.LineSegments(linesGeo, linesMat);
+            scene.add(lineSegments);
+
+            // Animation Loop
+            let clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsed = clock.getElapsedTime();
+
+                particleSystem.rotation.y = elapsed * 0.05;
+                particleSystem.rotation.x = Math.sin(elapsed * 0.03) * 0.1;
+                lineSegments.rotation.y = elapsed * 0.03;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Resize listener
+            window.addEventListener('resize', () => {
+                if (!canvas) return;
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+        }
+
+        // Initialize on load based on URL hash and listen to Firebase auth
+        window.addEventListener('DOMContentLoaded', () => {
+            checkFirebaseGoogleAuth();
+            listenToFirebaseAuth((user) => {
+                checkFirebaseGoogleAuth();
+            });
+
+            const hash = window.location.hash;
+            if (hash === '#track-section' || hash === '#track') {
+                switchPortalTab('track');
+            } else if (hash === '#bounty-section' || hash === '#bounty') {
+                switchPortalTab('bounty');
+            } else if (hash === '#legal-section' || hash === '#legal') {
+                switchPortalTab('legal');
+            } else {
+                switchPortalTab('report');
+            }
+
+            // Init 3D Scene
+            initCitizenThreeScene();
+        });
+    </script>
+</body>
+</html>

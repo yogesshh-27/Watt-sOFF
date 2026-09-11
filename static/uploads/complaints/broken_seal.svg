@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <rect width="600" height="400" fill="#12131C" rx="16"/>
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#171825"/>
+      <stop offset="100%" stop-color="#0C0D15"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="580" height="380" fill="url(#bg3)" rx="12" stroke="#2A2B3D" stroke-width="2"/>
+  <!-- Terminal Box with Broken Lead Seal -->
+  <rect x="140" y="70" width="320" height="260" rx="12" fill="#1B1C2A" stroke="#4B4E68" stroke-width="2"/>
+  <!-- Cut / Broken Lead Wire Seal -->
+  <path d="M240 180 L 290 200" fill="none" stroke="#A1A1AA" stroke-width="4" stroke-linecap="round"/>
+  <path d="M320 210 L 370 190" fill="none" stroke="#A1A1AA" stroke-width="4" stroke-linecap="round" stroke-dasharray="5,3"/>
+  <circle cx="305" cy="205" r="16" fill="#FF2D55" stroke="#FFF" stroke-width="2"/>
+  <text x="299" y="211" fill="#FFF" font-family="sans-serif" font-size="16" font-weight="bold">X</text>
+  <!-- Meter Terminal Exposed -->
+  <text x="165" y="110" fill="#FFF" font-family="sans-serif" font-size="16" font-weight="bold">Security Seal #DISCOM-DEL-9021</text>
+  <text x="165" y="135" fill="#FF2D55" font-family="sans-serif" font-size="13" font-weight="600">STATUS: BROKEN / PHYSICAL TAMPER</text>
+  <rect x="165" y="240" width="270" height="60" rx="8" fill="rgba(255,45,85,0.1)" stroke="#FF2D55" stroke-width="1"/>
+  <text x="180" y="265" fill="#FF2D55" font-family="sans-serif" font-size="12" font-weight="bold">Physical Inspection Verification</text>
+  <text x="180" y="285" fill="#A1A1AA" font-family="sans-serif" font-size="11">Cover opened and terminal block exposed</text>
+  <!-- Tag -->
+  <rect x="24" y="24" width="220" height="36" fill="rgba(0,0,0,0.6)" rx="8" stroke="#00E599" stroke-width="1"/>
+  <circle cx="40" cy="42" r="5" fill="#00E599"/>
+  <text x="54" y="46" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="bold">CITIZEN EVIDENCE #6105</text>
+</svg>

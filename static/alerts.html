@@ -3,94 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watt's Off — Alerts</title>
-    <meta name="description" content="View all active electricity anomaly alerts with severity classifications and risk scores.">
+    <title>Watt's Off — Theft Alerts Stream</title>
+    <meta name="description" content="Prioritized electricity theft and meter tamper alerts stream for DISCOM engineers.">
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-dark-body);
+        }
+        .alerts-page-wrap {
+            padding: 120px 24px 80px;
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-brand">
-            <span class="bolt">&#9889;</span> Watt's Off
-        </div>
-        <ul class="nav-links">
-            <li><a href="/static/dashboard.html">Dashboard</a></li>
-            <li><a href="/static/analysis.html">Analysis</a></li>
-            <li><a href="/static/alerts.html" class="active">Alerts</a></li>
-            <li><a href="/static/map.html">Map</a></li>
-        </ul>
-        <div class="nav-user">
-            <span>DISCOM Officer</span>
-            <div class="avatar">DO</div>
-            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="page">
-        <div class="page-header flex-between">
+    <!-- Floating Pill Nav (Dark) -->
+    <header class="nav-wrapper">
+        <nav class="nav-pill dark-nav">
+            <a href="/static/dashboard.html" class="nav-brand">
+                <div class="nav-brand-icon" style="background:#FFF; color:#000;">&#9889;</div>
+                <div class="nav-brand-text">Watt's <span>Off</span></div>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/static/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="/static/analysis.html" class="nav-link">Analysis</a></li>
+                <li><a href="/static/alerts.html" class="nav-link active">Alerts</a></li>
+                <li><a href="/static/map.html" class="nav-link">Map</a></li>
+                <li><a href="/static/citizen.html" class="nav-link" style="color: var(--accent-cyan); font-weight: 700;">Citizen Portal &#8599;</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="/static/login.html" onclick="sessionStorage.clear()" class="btn-pill btn-pill-outline-dark btn-pill-sm">
+                    Logout
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="alerts-page-wrap">
+        <!-- Split Header -->
+        <div class="section-header-split">
             <div>
-                <h1 class="page-title">Alerts</h1>
-                <p class="page-subtitle">All anomaly alerts sorted by risk score. Click any row to investigate.</p>
+                <div class="section-eyebrow">Priority Incident Stream</div>
+                <h1 class="section-title">Theft &amp; Tamper <em>Alerts</em></h1>
+                <p class="section-desc">
+                    Field incidents ranked by Under-consumption depth, hardware sensor events, and feeder balance deficits.
+                </p>
             </div>
             <div>
-                <select class="form-input" id="filterSeverity" onchange="filterAlerts()" style="width: 180px;">
-                    <option value="all">All Severities</option>
-                    <option value="CRITICAL">&#128308; Critical</option>
-                    <option value="HIGH">&#128992; High</option>
-                    <option value="MEDIUM">&#128993; Medium</option>
-                    <option value="LOW">&#128994; Low</option>
+                <select class="form-input" id="theftFilter" onchange="filterAlerts()" style="min-width: 240px; background: #111117;">
+                    <option value="all">All Incident Classifications</option>
+                    <option value="HIGH_THEFT_RISK">&#128308; High Theft Risk (&lt; -30%)</option>
+                    <option value="SUSPICIOUS">&#128992; Suspicious Under-Consumption</option>
+                    <option value="OVER_CONSUMPTION">&#128995; Over-Consumption (Not Theft)</option>
+                    <option value="NORMAL">&#128994; Normal</option>
                 </select>
             </div>
         </div>
 
-        <div class="card">
-            <div class="table-container">
-                <table>
+        <!-- Bento Table Card -->
+        <div class="bento-card" style="margin-bottom: 60px;">
+            <div class="table-responsive">
+                <table class="nex-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Severity</th>
+                            <th>Alert ID</th>
+                            <th>Theft Status</th>
                             <th>Meter</th>
                             <th>Consumer</th>
-                            <th>Location</th>
-                            <th>Risk Score</th>
-                            <th>Anomaly Type</th>
-                            <th>Actual (kWh)</th>
-                            <th>Expected (kWh)</th>
-                            <th>Deviation</th>
+                            <th>Feeder</th>
+                            <th>Theft Risk</th>
+                            <th>Actual</th>
+                            <th>Expected</th>
+                            <th>Deviation %</th>
+                            <th>Signals Detected</th>
                             <th>Status</th>
-                            <th>Time</th>
+                            <th>Timestamp</th>
                         </tr>
                     </thead>
-                    <tbody id="alertsTable">
-                        <tr><td colspan="12" class="loading">Loading alerts</td></tr>
+                    <tbody id="alertsTableBody">
+                        <tr>
+                            <td colspan="12" style="text-align: center; padding: 40px; color: var(--text-dark-muted);">
+                                Loading active grid theft alerts...
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- Giant Watermark Footer -->
+    <footer class="nex-footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <h3>Watt's <em>Off</em></h3>
+                <p>AI-Powered electricity theft detection and telemetry monitoring for Indian DISCOMs.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="/static/dashboard.html">Theft Dashboard</a></li>
+                    <li><a href="/static/analysis.html">Analysis</a></li>
+                    <li><a href="/static/alerts.html">Alerts</a></li>
+                    <li><a href="/static/map.html">Map</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Thresholds</h4>
+                <ul>
+                    <li>Theft Risk &#8805; 65: High Risk</li>
+                    <li>Under-use: &minus;10% to &minus;30%</li>
+                    <li>Over-use: Not Theft</li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Incident Response</h4>
+                <ul>
+                    <li>Field Teams</li>
+                    <li>False Alarm Audit</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-watermark">WATT'S OFF</div>
+        <div class="footer-bottom">
+            <div>&copy; 2026 Watt's Off AI &mdash; Advanced DISCOM Grid Protection.</div>
+            <div>Automated Anomaly Ingestion Stream.</div>
+        </div>
+    </footer>
+
     <script>
-        // Auth guard
         if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
             window.location.href = '/static/login.html';
         }
 
         let allAlerts = [];
-
-        function getSeverityBadge(severity) {
-            const cls = severity ? severity.toLowerCase() : 'low';
-            const icons = { 'critical': '&#128308;', 'high': '&#128992;', 'medium': '&#128993;', 'low': '&#128994;' };
-            return `<span class="badge badge-${cls}">${icons[cls] || ''} ${severity || 'LOW'}</span>`;
-        }
-
-        function getStatusBadge(status) {
-            if (status === 'inspection_assigned') return '<span class="badge badge-inspection">INSPECTION</span>';
-            if (status === 'false_alarm') return '<span class="badge badge-false-alarm">FALSE ALARM</span>';
-            if (status === 'flagged') return '<span class="badge badge-critical">FLAGGED</span>';
-            return '<span class="badge badge-normal">NORMAL</span>';
-        }
 
         function timeAgo(ts) {
             const diff = Date.now() - new Date(ts).getTime();
@@ -103,38 +152,61 @@
         }
 
         function renderAlerts(alerts) {
-            const table = document.getElementById('alertsTable');
+            const tbody = document.getElementById('alertsTableBody');
             if (alerts.length === 0) {
-                table.innerHTML = '<tr><td colspan="12" class="empty-state">No alerts match the filter</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 40px; color: var(--text-dark-muted);">No alerts match the selected classification filter.</td></tr>`;
                 return;
             }
 
-            table.innerHTML = alerts.map(a => `
-                <tr onclick="window.location.href='/static/meter_detail.html?meter=${a.meter_id}'">
-                    <td class="text-muted">#${a.id}</td>
-                    <td>${getSeverityBadge(a.severity)}</td>
-                    <td><strong style="color: var(--accent);">${a.meter_id}</strong></td>
-                    <td>${a.consumer_name || '--'}</td>
-                    <td>${a.location}</td>
-                    <td class="text-mono"><strong>${a.risk_score}</strong></td>
-                    <td style="font-size: 0.8rem;">${(a.anomaly_type || '').replace(/,/g, ', ')}</td>
-                    <td class="text-mono">${a.actual_kwh?.toFixed(1) || '--'}</td>
-                    <td class="text-mono">${a.expected_kwh?.toFixed(1) || '--'}</td>
-                    <td class="text-mono ${a.deviation_pct > 0 ? 'text-red' : 'text-green'}">
-                        ${a.deviation_pct > 0 ? '+' : ''}${a.deviation_pct?.toFixed(0) || 0}%
-                    </td>
-                    <td>${getStatusBadge(a.anomaly_status)}</td>
-                    <td class="text-muted" style="font-size: 0.8rem;">${timeAgo(a.created_at)}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = alerts.map(a => {
+                const status = a.theft_status || 'NORMAL';
+                const badgeClass = status === 'HIGH_THEFT_RISK' ? 'badge-critical' :
+                                   status === 'SUSPICIOUS' ? 'badge-high' :
+                                   status === 'OVER_CONSUMPTION' ? 'badge-overconsumption' : 'badge-low';
+                const label = status === 'HIGH_THEFT_RISK' ? 'HIGH THEFT' :
+                              status === 'SUSPICIOUS' ? 'SUSPICIOUS' :
+                              status === 'OVER_CONSUMPTION' ? 'OVER-CONSUME' : 'NORMAL';
+
+                const signals = a.signals_list || [];
+                const signalTagsHtml = signals.map(s => {
+                    let tagClass = 'mismatch';
+                    if (s.includes('tamper') || s.includes('cover') || s.includes('bypass') || s.includes('magnetic')) tagClass = 'tamper';
+                    else if (s.includes('drop')) tagClass = 'drop';
+                    else if (s.includes('reverse')) tagClass = 'reverse';
+                    else if (s.includes('pattern') || s.includes('history')) tagClass = 'history';
+                    return `<span class="signal-tag ${tagClass}">${s.replace('_', ' ')}</span>`;
+                }).join(' ');
+
+                const dev = a.deviation_pct != null ? a.deviation_pct : 0;
+                const devColor = dev < -10 ? '#FF2D55' : (dev > 20 ? '#8B5CF6' : '#00E599');
+
+                return `
+                    <tr onclick="window.location.href='/static/meter_detail.html?meter=${a.meter_id}'">
+                        <td class="font-mono text-muted">#${a.id}</td>
+                        <td><span class="badge-pill ${badgeClass}">${label}</span></td>
+                        <td><span class="meter-id-badge">&#9889; ${a.meter_id}</span></td>
+                        <td style="color: #FFF; font-weight: 600;">${a.consumer_name || '--'}</td>
+                        <td class="font-mono text-white">${a.transformer_id || a.location}</td>
+                        <td><strong class="font-mono" style="font-size: 1.15rem; color: #FFF;">${a.theft_risk_score != null ? a.theft_risk_score : (a.risk_score || 0)}</strong></td>
+                        <td class="font-mono text-white">${a.actual_kwh != null ? a.actual_kwh.toFixed(1) : '--'}</td>
+                        <td class="font-mono" style="color: var(--accent-cyan);">${a.expected_kwh != null ? a.expected_kwh.toFixed(1) : '--'}</td>
+                        <td class="font-mono" style="color: ${devColor}; font-weight: 700;">
+                            ${dev > 0 ? '+' : ''}${dev.toFixed(1)}%
+                        </td>
+                        <td><div class="theft-signal-tags">${signalTagsHtml || '<span style="color:var(--text-dark-muted);font-size:0.75rem;">Under-use</span>'}</div></td>
+                        <td><span class="badge-pill badge-neutral">${(a.anomaly_status || 'FLAGGED').replace('_', ' ').toUpperCase()}</span></td>
+                        <td class="font-mono text-muted" style="font-size: 0.75rem;">${timeAgo(a.created_at)}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function filterAlerts() {
-            const filter = document.getElementById('filterSeverity').value;
-            if (filter === 'all') {
+            const val = document.getElementById('theftFilter').value;
+            if (val === 'all') {
                 renderAlerts(allAlerts);
             } else {
-                renderAlerts(allAlerts.filter(a => a.severity === filter));
+                renderAlerts(allAlerts.filter(a => a.theft_status === val));
             }
         }
 
@@ -144,15 +216,12 @@
                 allAlerts = await res.json();
                 filterAlerts();
             } catch (err) {
-                console.error('Alerts load error:', err);
-                document.getElementById('alertsTable').innerHTML =
-                    '<tr><td colspan="12" class="empty-state">Error loading alerts</td></tr>';
+                console.error('Error loading alerts:', err);
             }
         }
 
         loadAlerts();
-        // Refresh every 10 seconds
-        setInterval(loadAlerts, 10000);
+        setInterval(loadAlerts, 6000);
     </script>
 </body>
 </html>

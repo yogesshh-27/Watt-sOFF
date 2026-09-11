@@ -3,148 +3,693 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watt's Off — Dashboard</title>
-    <meta name="description" content="Real-time electricity anomaly detection dashboard for DISCOM officers. Monitor meters, view alerts, and investigate suspicious consumption patterns.">
+    <title>Watt's Off — AI Electricity Theft Detection</title>
+    <meta name="description" content="AI-Powered electricity theft and meter tamper detection platform for DISCOM officers and power utilities.">
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Chart.js and Three.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-brand">
-            <span class="bolt">&#9889;</span> Watt's Off
-        </div>
-        <ul class="nav-links">
-            <li><a href="/static/dashboard.html" class="active">Dashboard</a></li>
-            <li><a href="/static/analysis.html">Analysis</a></li>
-            <li><a href="/static/alerts.html">Alerts</a></li>
-            <li><a href="/static/map.html">Map</a></li>
-        </ul>
-        <div class="nav-user">
-            <span id="userName">DISCOM Officer</span>
-            <div class="avatar" id="userAvatar">DO</div>
-            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="page">
-        <div class="page-header flex-between">
-            <div>
-                <h1 class="page-title">Dashboard</h1>
-                <p class="page-subtitle">
-                    <span class="live-dot"></span>
-                    Real-time anomaly monitoring &mdash; updates every 5 seconds
+    <!-- Floating Pill Navigation (NexStudio style) -->
+    <header class="nav-wrapper">
+        <nav class="nav-pill" id="mainNav">
+            <a href="/static/dashboard.html" class="nav-brand">
+                <div class="nav-brand-icon">&#9889;</div>
+                <div class="nav-brand-text">Watt's <span>Off</span></div>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/static/dashboard.html" class="nav-link active">Dashboard</a></li>
+                <li><a href="/static/analysis.html" class="nav-link">Analysis</a></li>
+                <li><a href="/static/alerts.html" class="nav-link">Alerts</a></li>
+                <li><a href="/static/map.html" class="nav-link">Map</a></li>
+                <li><a href="/static/citizen.html" class="nav-link" style="color: var(--accent-cyan); font-weight: 700;">Citizen Portal &#8599;</a></li>
+            </ul>
+            <div class="nav-actions">
+                <div class="hero-tag-pill" style="margin-bottom: 0; padding: 6px 14px; background: rgba(0,0,0,0.04);">
+                    <span class="hero-tag-dot"></span>
+                    <span style="font-family: var(--font-mono); font-size: 0.75rem;">THEFT DETECTOR LIVE</span>
+                </div>
+                <a href="/static/login.html" onclick="sessionStorage.clear()" class="btn-pill btn-pill-dark btn-pill-sm">
+                    Logout
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section (Light & Elegant NexStudio Display) -->
+    <section class="hero-section">
+        <div class="hero-tag-pill">
+            <span class="hero-tag-dot"></span>
+            Smart Grid Electricity Theft &amp; Tamper Surveillance
+        </div>
+
+        <h1 class="hero-title">
+            Detect Power Theft Via <em>Under-Consumption</em> Intelligence.
+        </h1>
+
+        <p class="hero-subtitle">
+            When meters are bypassed or tampered with, consumption plummets below baseline. Watt's Off isolates under-consumption signatures, reconciles feeder energy balances, and exposes power theft in real time.
+        </p>
+
+        <div class="hero-cta-group">
+            <a href="#operations" class="btn-pill btn-pill-dark btn-pill-lg">
+                View Theft Telemetry &#8599;
+            </a>
+            <a href="/static/map.html" class="btn-pill btn-pill-outline btn-pill-lg">
+                Geospatial Theft Map
+            </a>
+        </div>
+
+        <!-- Regulators & Grid Partners Marquee -->
+        <div class="partner-strip">
+            <div class="partner-logo">&#9889; DISCOM NORTH</div>
+            <div class="partner-logo">&#10070; DELHI POWER GRID</div>
+            <div class="partner-logo">&#9670; TELEMETRY LABS</div>
+            <div class="partner-logo">&#9650; SMART ENERGY CORP</div>
+            <div class="partner-logo">&#9632; REGULATORY WATCH</div>
+        </div>
+
+        <!-- 3D Liquid Wave Silk Banner (Three.js WebGL) -->
+        <div class="hero-canvas-container">
+            <canvas id="threeWaveCanvas"></canvas>
+            <div class="hero-canvas-overlay">
+                <div class="canvas-overlay-badge">&#9889; Multi-Vector Theft Neural Mesh</div>
+                <div class="canvas-overlay-title">Continuous Baseline Deviation &amp; <em>Tamper Event</em> Correlation</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pitch-Black Operations & Bento Grid Section -->
+    <section class="black-section" id="operations">
+        <div class="section-container">
+
+            <!-- Split Section Header -->
+            <div class="section-header-split">
+                <div>
+                    <div class="section-eyebrow">Real-Time Grid Surveillance</div>
+                    <h2 class="section-title">Theft Intelligence for <em>DISCOM Officers</em></h2>
+                </div>
+                <p class="section-desc">
+                    Calculates Deviation % = ((Actual &minus; Expected) / Expected) &times; 100. Flags severe under-consumption (&lt; &minus;30%), correlates physical tamper sensors, and reconciles transformer energy gaps.
                 </p>
             </div>
-            <div class="text-muted" style="font-size: 0.8rem;" id="lastUpdate">
-                Last updated: --
+
+            <!-- Status Classification Legend Strip -->
+            <div class="theft-legend-strip">
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; color: var(--text-dark-muted); letter-spacing: 0.08em;">
+                    Detection Criteria:
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot green"></span>
+                    <span><strong>Normal:</strong> Within &plusmn;10% of Baseline</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot orange"></span>
+                    <span><strong>Suspicious:</strong> &minus;10% to &minus;30% Under-consumption</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot red"></span>
+                    <span><strong>High Theft Risk:</strong> &lt; &minus;30% Under-consumption + Multi-Signals</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot purple"></span>
+                    <span><strong>Over-Consumption:</strong> &gt; +20% Load Surge <em>(Not Electricity Theft)</em></span>
+                </div>
+            </div>
+
+            <!-- Metric Counters Row (5 Key Metric Cards) -->
+            <div class="metrics-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="metric-card">
+                    <div class="metric-num" id="totalMeters">--</div>
+                    <div class="metric-label">Smart Meters Monitored</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-num"><span class="accent-green" id="normalMeters">--</span></div>
+                    <div class="metric-label">Normal Consumers</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-num"><span class="accent-yellow" id="suspiciousMeters">--</span></div>
+                    <div class="metric-label">Suspicious Under-use</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-num"><span class="accent-red" id="highTheftMeters">--</span></div>
+                    <div class="metric-label">High Theft Risks</div>
+                </div>
+                <div class="metric-card" style="border-color: rgba(255, 45, 85, 0.25); background: rgba(255, 45, 85, 0.04);">
+                    <div class="metric-num"><span style="color: #FF2D55;" id="unaccountedEnergyVal">--</span></div>
+                    <div class="metric-label">Estimated Unaccounted Energy</div>
+                </div>
+            </div>
+
+            <!-- Energy Balance Waterfall Accounting Section -->
+            <div class="energy-balance-card">
+                <div class="bento-card-header" style="margin-bottom: 0;">
+                    <div>
+                        <div class="bento-card-title">Distribution Feeder <em>Energy Accounting Balance</em></div>
+                        <div style="font-size: 0.8rem; color: var(--text-dark-muted); margin-top: 4px;">
+                            Grid Input vs Sum of Smart Meters + Technical Dissipation (5.5%). Unaccounted gap highlights direct line tapping &amp; unmetered theft.
+                        </div>
+                    </div>
+                    <span class="badge-pill badge-critical font-mono" id="balanceStatusBadge">LEAK DETECTED</span>
+                </div>
+
+                <div class="balance-grid">
+                    <div class="balance-step">
+                        <div class="balance-step-label">Feeder Grid Input</div>
+                        <div class="balance-step-value" id="balanceInputKwh">-- kWh</div>
+                        <div class="balance-step-sub">100% Primary Grid Supply</div>
+                    </div>
+                    <div class="balance-step">
+                        <div class="balance-step-label">Total Metered Revenue</div>
+                        <div class="balance-step-value" style="color: #00E599;" id="balanceMeteredKwh">-- kWh</div>
+                        <div class="balance-step-sub" id="balanceMeteredPct">--% Billed Consumption</div>
+                    </div>
+                    <div class="balance-step">
+                        <div class="balance-step-label">Allowed Technical Loss</div>
+                        <div class="balance-step-value" style="color: #06B6D4;" id="balanceTechLossKwh">-- kWh</div>
+                        <div class="balance-step-sub">5.5% Impedance &amp; Copper Loss</div>
+                    </div>
+                    <div class="balance-step highlight-theft">
+                        <div class="balance-step-label" style="color: #FF4D6D;">Unaccounted Energy Gap</div>
+                        <div class="balance-step-value" style="color: #FF2D55;" id="balanceTheftLossKwh">-- kWh</div>
+                        <div class="balance-step-sub" style="color: #FF4D6D;" id="balanceTheftPct">--% Suspected Electricity Theft</div>
+                    </div>
+                </div>
+
+                <div class="balance-bar-track">
+                    <div class="balance-bar-metered" id="barMetered" style="width: 75%;" title="Metered Revenue"></div>
+                    <div class="balance-bar-tech" id="barTech" style="width: 5.5%;" title="Technical Losses"></div>
+                    <div class="balance-bar-unaccounted" id="barTheft" style="width: 19.5%;" title="Unaccounted Non-Technical Theft Gap"></div>
+                </div>
+            </div>
+
+            <!-- Bento Grid: Theft Detection Overview Chart + Active Alerts -->
+            <div class="bento-grid">
+                <!-- Theft Detection Overview (8 cols) -->
+                <div class="bento-card bento-col-8">
+                    <div class="bento-card-header">
+                        <div>
+                            <div class="bento-card-title">Theft Detection <em>Overview</em></div>
+                            <div style="font-size: 0.8rem; color: var(--text-dark-muted); margin-top: 4px;">
+                                Actual Consumption vs Baseline Expected. Severe under-consumption indicates meter bypass or physical tampering.
+                            </div>
+                        </div>
+                        <div class="badge-pill badge-neutral font-mono" id="lastUpdatedBadge">SYNCED</div>
+                    </div>
+                    <div class="bento-chart-wrap">
+                        <canvas id="theftChart"></canvas>
+                    </div>
+                    <!-- Chart Subtitle Legend -->
+                    <div style="display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-dark-muted); justify-content: center;">
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #00E599; border-radius: 3px;"></span> Normal
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #F59E0B; border-radius: 3px;"></span> Suspicious Under-consumption
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #FF2D55; border-radius: 3px;"></span> High Theft Risk (&lt; -30%)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #8B5CF6; border-radius: 3px;"></span> Over-consumption (Not Theft)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border: 1px dashed rgba(255,255,255,0.6); background: rgba(255,255,255,0.12); border-radius: 3px;"></span> Expected Baseline
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Recent Alerts Stream (4 cols) -->
+                <div class="bento-card bento-col-4">
+                    <div class="bento-card-header">
+                        <div>
+                            <div class="bento-card-title">Active <em>Alerts</em></div>
+                            <div style="font-size: 0.8rem; color: var(--text-dark-muted); margin-top: 4px;">
+                                Field incidents &amp; explainable triggers
+                            </div>
+                        </div>
+                        <a href="/static/alerts.html" class="btn-pill btn-pill-outline-dark btn-pill-sm">All Alerts</a>
+                    </div>
+                    <div class="alert-feed-list" id="alertFeed">
+                        <div style="padding: 20px; text-align: center; color: var(--text-dark-muted);">Loading live alert stream...</div>
+                    </div>
+                </div>
+
+                <!-- High Risk Table (12 cols) -->
+                <div class="bento-card bento-col-12">
+                    <div class="bento-card-header">
+                        <div>
+                            <div class="bento-card-title">Priority <em>Theft Investigations</em></div>
+                            <div style="font-size: 0.8rem; color: var(--text-dark-muted); margin-top: 4px;">
+                                Flagged meters prioritized by Under-consumption depth &amp; composite theft risk score (0&ndash;100)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="nex-table">
+                            <thead>
+                                <tr>
+                                    <th>Meter ID</th>
+                                    <th>Consumer</th>
+                                    <th>Transformer Feeder</th>
+                                    <th>Actual</th>
+                                    <th>Expected</th>
+                                    <th>Deviation %</th>
+                                    <th>Theft Risk Score</th>
+                                    <th>Theft Status</th>
+                                    <th>Detected Signals</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="highRiskTableBody">
+                                <tr>
+                                    <td colspan="10" style="text-align: center; padding: 30px; color: var(--text-dark-muted);">
+                                        Loading prioritized theft roster...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Numbered Pipeline Section (NexStudio #1, #2, #3, #4) -->
+            <div class="section-header-split" style="margin-bottom: 40px; margin-top: 40px;">
+                <div>
+                    <div class="section-eyebrow">Theft Prevention Architecture</div>
+                    <h2 class="section-title">How Watt's Off <em>Stops Power Theft</em></h2>
+                </div>
+            </div>
+
+            <div class="pipeline-grid">
+                <div class="pipeline-card">
+                    <div class="pipeline-num">#01</div>
+                    <h3 class="pipeline-title">Under-Consumption Isolation</h3>
+                    <p class="pipeline-desc">Unlike naive spike monitors, our engine detects negative baseline deviations &mdash; identifying bypassed meters recording artificially diminished units.</p>
+                </div>
+                <div class="pipeline-card">
+                    <div class="pipeline-num">#02</div>
+                    <h3 class="pipeline-title">Hardware Tamper Sensors</h3>
+                    <p class="pipeline-desc">Direct telemetry feeds from optical terminal cover switches, neodymium magnetic field hall sensors, and neutral loop bypass circuits.</p>
+                </div>
+                <div class="pipeline-card">
+                    <div class="pipeline-num">#03</div>
+                    <h3 class="pipeline-title">Transformer Energy Balances</h3>
+                    <p class="pipeline-desc">Automated non-technical loss accounting flags distribution transformers delivering higher kilowatt-hours than the aggregate consumer billing sum.</p>
+                </div>
+                <div class="pipeline-card">
+                    <div class="pipeline-num">#04</div>
+                    <h3 class="pipeline-title">Non-Theft Over-Consumption Guard</h3>
+                    <p class="pipeline-desc">High usage anomalies are strictly categorized as load surges (0 theft score), preventing costly false accusations and protecting honest consumers.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Giant Watermark Footer (NexStudio Signature) -->
+    <footer class="nex-footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <h3>Watt's <em>Off</em></h3>
+                <p>Advanced AI-powered electricity theft detection and telemetry monitoring platform for Indian Power Distribution Companies (DISCOMs).</p>
+            </div>
+            <div class="footer-col">
+                <h4>Surveillance</h4>
+                <ul>
+                    <li><a href="/static/dashboard.html">Theft Dashboard</a></li>
+                    <li><a href="/static/analysis.html">Deviation Analysis</a></li>
+                    <li><a href="/static/alerts.html">Active Alerts</a></li>
+                    <li><a href="/static/map.html">Geospatial Grid Map</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Engine Rules</h4>
+                <ul>
+                    <li><a href="#operations">Under-Consumption Depth</a></li>
+                    <li><a href="#operations">Hardware Tamper Events</a></li>
+                    <li><a href="#operations">Feeder Balance Accounting</a></li>
+                    <li><a href="#operations">Non-Theft Load Guard</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>System Status</h4>
+                <ul>
+                    <li><span style="color: var(--green);">&#9679;</span> Theft Engine Active</li>
+                    <li><span style="color: var(--green);">&#9679;</span> 7 Transformers Online</li>
+                    <li><span style="color: var(--green);">&#9679;</span> Live Telemetry Ready</li>
+                </ul>
             </div>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="summary-grid stagger" id="summaryCards">
-            <div class="summary-card total fade-in">
-                <div class="summary-icon">&#9879;</div>
-                <div class="summary-info">
-                    <div class="summary-label">Total Meters</div>
-                    <div class="summary-value" id="totalMeters">--</div>
-                </div>
-            </div>
-            <div class="summary-card normal fade-in">
-                <div class="summary-icon">&#10003;</div>
-                <div class="summary-info">
-                    <div class="summary-label">Normal</div>
-                    <div class="summary-value" id="normalMeters">--</div>
-                </div>
-            </div>
-            <div class="summary-card anomaly fade-in">
-                <div class="summary-icon">&#9888;</div>
-                <div class="summary-info">
-                    <div class="summary-label">Anomalies</div>
-                    <div class="summary-value" id="anomalyMeters">--</div>
-                </div>
-            </div>
-            <div class="summary-card critical fade-in">
-                <div class="summary-icon">&#9888;</div>
-                <div class="summary-info">
-                    <div class="summary-label">High Risk</div>
-                    <div class="summary-value" id="highRiskMeters">--</div>
-                </div>
-            </div>
+        <!-- Huge Outline Watermark -->
+        <div class="footer-watermark">WATT'S OFF</div>
+
+        <div class="footer-bottom">
+            <div>&copy; 2026 Watt's Off AI &mdash; Advanced DISCOM Electricity Theft Monitoring.</div>
+            <div>Strict Under-Consumption &amp; Non-Theft Over-Consumption Architecture.</div>
         </div>
+    </footer>
 
-        <!-- Dashboard Grid: Chart + Alerts -->
-        <div class="dashboard-grid">
-            <!-- Chart Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Live Consumption Overview</h2>
+    <!-- Slide-Over Investigation Modal -->
+    <div class="modal-backdrop" id="investigationModal" onclick="closeModal(event)">
+        <div class="slideover-panel" onclick="event.stopPropagation()">
+            <div class="slideover-header">
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-cyan); text-transform: uppercase;">
+                        Officer Theft Investigation Portal
+                    </div>
+                    <h2 style="font-size: 1.8rem; font-weight: 800; color: #FFF; margin-top: 4px;" id="modalMeterId">
+                        Meter M009
+                    </h2>
                 </div>
-                <div class="chart-container">
-                    <canvas id="consumptionChart"></canvas>
+                <button class="close-btn" onclick="closeModalDirect()">&times;</button>
+            </div>
+
+            <!-- Risk Gauge Box -->
+            <div class="risk-gauge-box">
+                <div class="risk-circle-wrap">
+                    <svg class="risk-svg" viewBox="0 0 100 100">
+                        <circle class="risk-circle-bg" cx="50" cy="50" r="42"></circle>
+                        <circle class="risk-circle-prog" id="modalRiskProgress" cx="50" cy="50" r="42"
+                                stroke="#FF2D55" stroke-dasharray="264" stroke-dashoffset="50"></circle>
+                    </svg>
+                    <div class="risk-circle-val" id="modalRiskScore">91</div>
+                </div>
+                <div>
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; color: var(--text-dark-muted); letter-spacing: 0.1em;">
+                        Theft Threat Assessment
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #FF2D55; margin-top: 4px;" id="modalSeverity">
+                        HIGH THEFT RISK
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-dark-body); margin-top: 4px;" id="modalConsumerInfo">
+                        Consumer: Suresh Plastic Works &bull; Industrial Feeder 2
+                    </div>
                 </div>
             </div>
 
-            <!-- Recent Alerts Feed -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Recent Alerts</h2>
-                    <a href="/static/alerts.html" class="btn btn-outline btn-sm">View All</a>
+            <!-- Telemetry Stats Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 16px;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dark-muted);">ACTUAL CONSUMPTION</div>
+                    <div style="font-size: 1.3rem; font-weight: 700; color: #FFF; margin-top: 4px;" id="modalActual">3.1 kWh</div>
                 </div>
-                <div class="alert-feed" id="alertFeed">
-                    <div class="loading">Loading alerts</div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 16px;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dark-muted);">EXPECTED BASELINE</div>
+                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--accent-cyan); margin-top: 4px;" id="modalExpected">10.2 kWh</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 16px;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dark-muted);">BASELINE DEVIATION</div>
+                    <div style="font-size: 1.3rem; font-weight: 700; margin-top: 4px;" id="modalDeviation">&minus;69.6%</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 16px;">
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dark-muted);">FEEDER BALANCE GAP</div>
+                    <div style="font-size: 1.3rem; font-weight: 700; color: #F59E0B; margin-top: 4px;" id="modalTransformerGap">18.4% Unaccounted</div>
                 </div>
             </div>
-        </div>
 
-        <!-- High-Risk Meters Table -->
-        <div class="card mt-lg">
-            <div class="card-header">
-                <h2 class="card-title">High-Risk Meters</h2>
+            <!-- Why Flagged Checklist -->
+            <div style="margin-bottom: 24px;">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #FFF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+                    Theft Signal Verification Checklist
+                </div>
+                <ul class="why-flagged-list" id="modalWhyFlagged">
+                    <!-- Dynamic Checklist Items -->
+                </ul>
             </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Meter ID</th>
-                            <th>Consumer</th>
-                            <th>Location</th>
-                            <th>Actual (kWh)</th>
-                            <th>Expected (kWh)</th>
-                            <th>Deviation</th>
-                            <th>Risk Score</th>
-                            <th>Severity</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="highRiskTable">
-                        <tr><td colspan="9" class="loading">Loading data</td></tr>
-                    </tbody>
-                </table>
+
+            <!-- Hardware Tamper Events Timeline -->
+            <div style="margin-bottom: 24px;" id="modalTamperSection">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #FF4D6D; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+                    Hardware Tamper Telemetry
+                </div>
+                <div class="tamper-timeline" id="modalTamperTimeline">
+                    <div style="font-size: 0.85rem; color: var(--text-dark-muted);">No hardware tamper events recorded.</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-dark);">
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dark-muted); text-transform: uppercase; margin-bottom: 14px;">
+                    Officer Intervention
+                </div>
+                <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+                    <button class="btn-pill btn-pill-warning" id="btnModalInspect" onclick="executeAction('inspect')">
+                        &#128269; Dispatch Field Inspection
+                    </button>
+                    <button class="btn-pill btn-pill-outline-dark" id="btnModalFalseAlarm" onclick="executeAction('false_alarm')">
+                        &#10005; Mark False Alarm
+                    </button>
+                    <a id="btnModalAnalysis" href="#" class="btn-pill btn-pill-white">
+                        Analyze Time Series &#8599;
+                    </a>
+                </div>
+                <div id="modalActionNotice" style="display: none; margin-top: 14px; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.85rem;"></div>
             </div>
         </div>
     </div>
 
+    <!-- =====================================================================
+         Scripts: Three.js 3D Wave, Chart.js, and Live Dashboard Polling
+         ===================================================================== -->
     <script>
-        // Auth guard
+        // Auth check
         if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
             window.location.href = '/static/login.html';
         }
 
-        let chart = null;
+        // Change nav bar style on scroll
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 300) {
+                nav.classList.add('dark-nav');
+            } else {
+                nav.classList.remove('dark-nav');
+            }
+        });
 
-        function getSeverityBadge(severity, score) {
-            const cls = severity ? severity.toLowerCase() : 'low';
-            return `<span class="badge badge-${cls}">${severity || 'LOW'} (${score})</span>`;
+        // ---------------------------------------------------------------------
+        // 1. Three.js 3D Liquid Wave / Silk Mesh Animation
+        // ---------------------------------------------------------------------
+        (function initThreeWave() {
+            const container = document.querySelector('.hero-canvas-container');
+            const canvas = document.getElementById('threeWaveCanvas');
+            if (!container || !canvas) return;
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x060609);
+
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 8, 22);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.8);
+            dirLight1.position.set(10, 20, 15);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x6366f1, 2.5);
+            dirLight2.position.set(-15, 10, -10);
+            scene.add(dirLight2);
+
+            const pointLight = new THREE.PointLight(0x06b6d4, 2, 50);
+            pointLight.position.set(0, 5, 5);
+            scene.add(pointLight);
+
+            const geometry = new THREE.PlaneGeometry(36, 24, 72, 48);
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x161622,
+                roughness: 0.25,
+                metalness: 0.85,
+                wireframe: false,
+                flatShading: false,
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -Math.PI / 2.6;
+            scene.add(mesh);
+
+            const posAttr = geometry.attributes.position;
+            const originalZ = new Float32Array(posAttr.count);
+            for (let i = 0; i < posAttr.count; i++) {
+                originalZ[i] = posAttr.getZ(i);
+            }
+
+            let mouseX = 0, mouseY = 0;
+            container.addEventListener('mousemove', (e) => {
+                const rect = container.getBoundingClientRect();
+                mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                mouseY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+            });
+
+            let clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const t = clock.getElapsedTime() * 1.2;
+
+                camera.position.x += (mouseX * 4 - camera.position.x) * 0.05;
+                camera.position.y += (8 + mouseY * 2 - camera.position.y) * 0.05;
+                camera.lookAt(0, 0, 0);
+
+                for (let i = 0; i < posAttr.count; i++) {
+                    const u = posAttr.getX(i);
+                    const v = posAttr.getY(i);
+                    const wave1 = Math.sin(u * 0.35 + t) * 1.2;
+                    const wave2 = Math.cos(v * 0.45 + t * 0.8) * 1.0;
+                    const wave3 = Math.sin((u + v) * 0.2 + t * 1.5) * 0.6;
+                    posAttr.setZ(i, wave1 + wave2 + wave3);
+                }
+                posAttr.needsUpdate = true;
+                geometry.computeVertexNormals();
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        })();
+
+        // ---------------------------------------------------------------------
+        // 2. Chart.js Theft Detection Overview Chart
+        // ---------------------------------------------------------------------
+        let theftChart = null;
+
+        function updateTheftChart(meters) {
+            const labels = meters.map(m => m.meter_id);
+            const actualData = meters.map(m => (m.actual_kwh != null ? m.actual_kwh : (m.latest_reading ? m.latest_reading.consumption_kwh : 0)));
+            const expectedData = meters.map(m => (m.expected_kwh != null ? m.expected_kwh : 0));
+
+            // Custom color classification strictly adhering to theft detection logic
+            const colors = meters.map(m => {
+                const status = m.theft_status;
+                if (status === 'HIGH_THEFT_RISK') return '#FF2D55';       // Red
+                if (status === 'SUSPICIOUS') return '#F59E0B';            // Orange/Yellow
+                if (status === 'OVER_CONSUMPTION') return '#8B5CF6';      // Purple (Over-consumption not theft)
+                return '#00E599';                                        // Green (Normal)
+            });
+
+            const borderColors = meters.map(m => {
+                const status = m.theft_status;
+                if (status === 'HIGH_THEFT_RISK') return '#FF6B8B';
+                if (status === 'SUSPICIOUS') return '#FCD34D';
+                if (status === 'OVER_CONSUMPTION') return '#C084FC';
+                return '#34D399';
+            });
+
+            const ctx = document.getElementById('theftChart').getContext('2d');
+
+            if (theftChart) {
+                theftChart.data.labels = labels;
+                theftChart.data.datasets[0].data = actualData;
+                theftChart.data.datasets[0].backgroundColor = colors;
+                theftChart.data.datasets[0].borderColor = borderColors;
+                theftChart.data.datasets[1].data = expectedData;
+                theftChart.update('none');
+            } else {
+                theftChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Actual Telemetry (kWh)',
+                                data: actualData,
+                                backgroundColor: colors,
+                                borderColor: borderColors,
+                                borderWidth: 1.5,
+                                borderRadius: 6,
+                                maxBarThickness: 32,
+                                order: 2
+                            },
+                            {
+                                label: 'Expected Baseline (kWh)',
+                                data: expectedData,
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                borderColor: 'rgba(255, 255, 255, 0.4)',
+                                borderWidth: 1.5,
+                                borderDash: [4, 4],
+                                borderRadius: 6,
+                                maxBarThickness: 32,
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(10, 10, 16, 0.95)',
+                                titleFont: { family: 'Space Mono', size: 13, weight: 'bold' },
+                                bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                                padding: 14,
+                                borderColor: 'rgba(255,255,255,0.18)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    afterBody: function(context) {
+                                        const index = context[0].dataIndex;
+                                        const m = meters[index];
+                                        if (!m) return '';
+                                        const dev = m.deviation_pct != null ? m.deviation_pct : 0;
+                                        const devSign = dev > 0 ? '+' : '';
+                                        const status = m.theft_status || 'NORMAL';
+                                        const risk = m.theft_risk_score || 0;
+                                        return [
+                                            `Deviation: ${devSign}${dev.toFixed(1)}%`,
+                                            `Theft Status: ${status}`,
+                                            `Theft Risk Score: ${risk}/100`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#71717A', font: { family: 'Space Mono', size: 11 } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#71717A', font: { family: 'Space Mono', size: 11 } },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                title: { display: true, text: 'Energy Consumption (kWh)', color: '#71717A', font: { family: 'Plus Jakarta Sans', size: 11 } }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
-        function getStatusBadge(status) {
-            if (status === 'inspection_assigned') return '<span class="badge badge-inspection">INSPECTION ASSIGNED</span>';
-            if (status === 'false_alarm') return '<span class="badge badge-false-alarm">FALSE ALARM</span>';
-            if (status === 'flagged') return '<span class="badge badge-critical">FLAGGED</span>';
-            return '<span class="badge badge-normal">NORMAL</span>';
-        }
+        // ---------------------------------------------------------------------
+        // 3. Dashboard Real-Time API Data Load
+        // ---------------------------------------------------------------------
+        let currentMetersData = [];
+        let activeModalMeterId = null;
+        let activeModalAlertId = null;
 
         function timeAgo(ts) {
             const diff = Date.now() - new Date(ts).getTime();
@@ -158,149 +703,305 @@
 
         async function loadDashboard() {
             try {
-                const res = await fetch('/api/dashboard/summary');
-                const data = await res.json();
+                // 1. Fetch Summary
+                const sumRes = await fetch('/api/dashboard/summary');
+                const summary = await sumRes.json();
 
-                // Update summary cards
-                document.getElementById('totalMeters').textContent = data.total_meters;
-                document.getElementById('normalMeters').textContent = data.normal_meters;
-                document.getElementById('anomalyMeters').textContent = data.anomaly_meters;
-                document.getElementById('highRiskMeters').textContent = data.high_risk_meters;
+                document.getElementById('totalMeters').textContent = summary.total_meters;
+                document.getElementById('normalMeters').textContent = summary.normal_meters;
+                document.getElementById('suspiciousMeters').textContent = summary.suspicious_meters;
+                document.getElementById('highTheftMeters').textContent = summary.high_theft_meters;
 
-                // Update last update time
-                document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+                // Energy Balance Metrics
+                const eb = summary.energy_balance || {};
+                const unaccountedKwh = eb.unaccounted_loss_kwh || 0;
+                const unaccountedPct = eb.unaccounted_pct || 0;
+                document.getElementById('unaccountedEnergyVal').textContent = `${unaccountedKwh.toLocaleString()} kWh`;
 
-                // Update high-risk table
-                const table = document.getElementById('highRiskTable');
-                if (data.high_risk_list && data.high_risk_list.length > 0) {
-                    table.innerHTML = data.high_risk_list.map(m => `
-                        <tr onclick="window.location.href='/static/meter_detail.html?meter=${m.meter_id}'">
-                            <td><strong style="color: var(--accent);">${m.meter_id}</strong></td>
-                            <td>${m.consumer_name || '--'}</td>
-                            <td>${m.location}</td>
-                            <td class="text-mono">${m.actual_kwh?.toFixed(1) || '--'}</td>
-                            <td class="text-mono">${m.expected_kwh?.toFixed(1) || '--'}</td>
-                            <td class="text-mono ${m.deviation_pct > 0 ? 'text-red' : 'text-green'}">
-                                ${m.deviation_pct > 0 ? '+' : ''}${m.deviation_pct?.toFixed(0) || 0}%
-                            </td>
-                            <td class="text-mono"><strong>${m.risk_score}</strong></td>
-                            <td>${getSeverityBadge(null, m.risk_score).replace('LOW', m.risk_score >= 81 ? 'CRITICAL' : m.risk_score >= 61 ? 'HIGH' : m.risk_score >= 31 ? 'MEDIUM' : 'LOW').replace('badge-low', m.risk_score >= 81 ? 'badge-critical' : m.risk_score >= 61 ? 'badge-high' : m.risk_score >= 31 ? 'badge-medium' : 'badge-low')}</td>
-                            <td>${getStatusBadge(m.status)}</td>
-                        </tr>
-                    `).join('');
+                document.getElementById('balanceInputKwh').textContent = `${(eb.total_grid_input_kwh || 0).toLocaleString()} kWh`;
+                document.getElementById('balanceMeteredKwh').textContent = `${(eb.total_metered_kwh || 0).toLocaleString()} kWh`;
+                document.getElementById('balanceTechLossKwh').textContent = `${(eb.technical_loss_kwh || 0).toLocaleString()} kWh`;
+                document.getElementById('balanceTheftLossKwh').textContent = `${unaccountedKwh.toLocaleString()} kWh`;
+
+                const meteredPct = eb.total_grid_input_kwh ? ((eb.total_metered_kwh / eb.total_grid_input_kwh) * 100).toFixed(1) : 0;
+                document.getElementById('balanceMeteredPct').textContent = `${meteredPct}% Billed Consumption`;
+                document.getElementById('balanceTheftPct').textContent = `${unaccountedPct}% Suspected Theft Gap`;
+
+                // Progress Bar Widths
+                const meteredWidth = Math.min(100, Math.max(0, meteredPct));
+                const techWidth = Math.min(100 - meteredWidth, 5.5);
+                const theftWidth = Math.max(0, 100 - meteredWidth - techWidth);
+                document.getElementById('barMetered').style.width = `${meteredWidth}%`;
+                document.getElementById('barTech').style.width = `${techWidth}%`;
+                document.getElementById('barTheft').style.width = `${theftWidth}%`;
+
+                const badgeEl = document.getElementById('balanceStatusBadge');
+                if (unaccountedPct > 10) {
+                    badgeEl.className = 'badge-pill badge-critical font-mono';
+                    badgeEl.textContent = 'CRITICAL THEFT GAP';
+                } else if (unaccountedPct > 5) {
+                    badgeEl.className = 'badge-pill badge-high font-mono';
+                    badgeEl.textContent = 'MODERATE LEAK';
                 } else {
-                    table.innerHTML = '<tr><td colspan="9" class="empty-state">No high-risk meters detected</td></tr>';
+                    badgeEl.className = 'badge-pill badge-low font-mono';
+                    badgeEl.textContent = 'GRID BALANCED';
                 }
 
-                // Update alert feed
-                const feed = document.getElementById('alertFeed');
-                if (data.recent_alerts && data.recent_alerts.length > 0) {
-                    feed.innerHTML = data.recent_alerts.map(a => `
-                        <div class="alert-item" onclick="window.location.href='/static/meter_detail.html?meter=${a.meter_id}'">
-                            <div class="alert-dot ${a.severity?.toLowerCase() || 'low'}"></div>
-                            <div class="alert-content">
-                                <div class="alert-message">${a.message}</div>
-                                <div class="alert-meta">${a.meter_id} &middot; ${a.location} &middot; ${timeAgo(a.created_at)}</div>
+                document.getElementById('lastUpdatedBadge').textContent = 'UPDATED ' + new Date().toLocaleTimeString();
+
+                // Render Priority Theft Investigations Table
+                const tbody = document.getElementById('highRiskTableBody');
+                if (summary.high_theft_list && summary.high_theft_list.length > 0) {
+                    tbody.innerHTML = summary.high_theft_list.map(m => {
+                        const isHighTheft = m.theft_status === 'HIGH_THEFT_RISK';
+                        const sevClass = isHighTheft ? 'badge-critical' : 'badge-high';
+                        const statusLabel = isHighTheft ? 'HIGH THEFT RISK' : 'SUSPICIOUS';
+
+                        // Format detected signals tags
+                        const signals = m.signals_list || [];
+                        const signalTagsHtml = signals.map(s => {
+                            let tagClass = 'mismatch';
+                            if (s.includes('tamper') || s.includes('cover') || s.includes('bypass') || s.includes('magnetic')) tagClass = 'tamper';
+                            else if (s.includes('drop')) tagClass = 'drop';
+                            else if (s.includes('reverse')) tagClass = 'reverse';
+                            else if (s.includes('pattern') || s.includes('history')) tagClass = 'history';
+                            return `<span class="signal-tag ${tagClass}">${s.replace('_', ' ')}</span>`;
+                        }).join(' ');
+
+                        return `
+                            <tr onclick="openInvestigation('${m.meter_id}')">
+                                <td><span class="meter-id-badge">&#9889; ${m.meter_id}</span></td>
+                                <td style="color: #FFF; font-weight: 600;">${m.consumer_name}</td>
+                                <td class="font-mono text-white">${m.transformer_id || '--'}</td>
+                                <td class="font-mono text-white">${m.actual_kwh ? m.actual_kwh.toFixed(1) : '--'}</td>
+                                <td class="font-mono" style="color: var(--accent-cyan);">${m.expected_kwh ? m.expected_kwh.toFixed(1) : '--'}</td>
+                                <td class="font-mono" style="color: #FF2D55; font-weight: 700;">
+                                    ${m.deviation_pct ? m.deviation_pct.toFixed(1) : 0}%
+                                </td>
+                                <td><strong class="font-mono" style="font-size: 1.15rem; color: #FFF;">${m.theft_risk_score}</strong></td>
+                                <td><span class="badge-pill ${sevClass}">${statusLabel}</span></td>
+                                <td><div class="theft-signal-tags">${signalTagsHtml || '<span style="color: var(--text-dark-muted); font-size: 0.75rem;">Under-consumption</span>'}</div></td>
+                                <td>
+                                    <button class="btn-pill btn-pill-outline-dark btn-pill-sm" onclick="event.stopPropagation(); openInvestigation('${m.meter_id}')">
+                                        Inspect &rarr;
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 30px; color: var(--text-dark-muted);">No active high-theft risks detected. All meters operating near expected baseline.</td></tr>`;
+                }
+
+                // Render Alerts Feed
+                const alertFeed = document.getElementById('alertFeed');
+                if (summary.recent_alerts && summary.recent_alerts.length > 0) {
+                    alertFeed.innerHTML = summary.recent_alerts.map(a => {
+                        const isTheft = a.theft_status === 'HIGH_THEFT_RISK' || a.theft_status === 'SUSPICIOUS';
+                        const dotClass = a.theft_status === 'HIGH_THEFT_RISK' ? 'red' :
+                                         a.theft_status === 'SUSPICIOUS' ? 'orange' :
+                                         a.theft_status === 'OVER_CONSUMPTION' ? 'purple' : 'green';
+                        return `
+                            <div class="alert-feed-item" onclick="openInvestigation('${a.meter_id}', ${a.id})">
+                                <div class="alert-dot ${dotClass}"></div>
+                                <div class="alert-item-body">
+                                    <div class="alert-item-msg">${a.message}</div>
+                                    <div class="alert-item-meta">${a.meter_id} &bull; ${a.location} &bull; ${timeAgo(a.created_at)}</div>
+                                </div>
                             </div>
+                        `;
+                    }).join('');
+                } else {
+                    alertFeed.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-dark-muted);">No recent alerts.</div>`;
+                }
+
+                // 2. Fetch Meters for Chart
+                const metersRes = await fetch('/api/meters');
+                currentMetersData = await metersRes.json();
+                updateTheftChart(currentMetersData);
+
+            } catch (err) {
+                console.error('Error loading dashboard:', err);
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // 4. Slide-Over Investigation Panel Logic
+        // ---------------------------------------------------------------------
+        async function openInvestigation(meterId, givenAlertId = null) {
+            activeModalMeterId = meterId;
+            const modal = document.getElementById('investigationModal');
+            modal.classList.add('active');
+
+            try {
+                const res = await fetch(`/api/meters/${meterId}`);
+                const data = await res.json();
+
+                document.getElementById('modalMeterId').textContent = `Meter ${meterId}`;
+                document.getElementById('modalConsumerInfo').textContent =
+                    `Consumer: ${data.consumer_name || '--'} • Location: ${data.location} (${data.transformer_id || ''})`;
+                document.getElementById('modalActual').textContent =
+                    data.actual_kwh != null ? `${data.actual_kwh.toFixed(1)} kWh` : '--';
+                document.getElementById('modalExpected').textContent =
+                    data.expected_kwh != null ? `${data.expected_kwh.toFixed(1)} kWh` : '--';
+
+                const dev = data.deviation_pct != null ? data.deviation_pct : 0;
+                const devEl = document.getElementById('modalDeviation');
+                devEl.textContent = `${dev > 0 ? '+' : ''}${dev.toFixed(1)}%`;
+                devEl.style.color = dev < -10 ? '#FF2D55' : (dev > 20 ? '#8B5CF6' : '#00E599');
+
+                // Transformer Gap
+                const tb = data.transformer_balance;
+                if (tb) {
+                    document.getElementById('modalTransformerGap').textContent =
+                        `${tb.unaccounted_pct}% Unaccounted (${tb.theft_loss_kwh} kWh)`;
+                } else {
+                    document.getElementById('modalTransformerGap').textContent = 'Normal';
+                }
+
+                const score = data.theft_risk_score != null ? data.theft_risk_score : (data.risk_score || 0);
+                document.getElementById('modalRiskScore').textContent = score;
+
+                const status = data.theft_status || 'NORMAL';
+                const sevEl = document.getElementById('modalSeverity');
+                sevEl.textContent = status.replace(/_/g, ' ');
+                sevEl.style.color = status === 'HIGH_THEFT_RISK' ? '#FF2D55' :
+                                    status === 'SUSPICIOUS' ? '#F59E0B' :
+                                    status === 'OVER_CONSUMPTION' ? '#8B5CF6' : '#00E599';
+
+                // Update SVG circular progress
+                const circle = document.getElementById('modalRiskProgress');
+                const offset = 264 - (score / 100) * 264;
+                circle.style.strokeDashoffset = offset;
+                circle.style.stroke = sevEl.style.color;
+
+                // Checklist
+                const signals = data.signals_list || [];
+                const hasUnder = dev < -10;
+                const hasHighUnder = dev < -30;
+                const hasDrop = signals.some(s => s.includes('drop'));
+                const hasTamper = (data.tamper_events && data.tamper_events.length > 0) || signals.some(s => s.includes('tamper'));
+                const hasHistory = signals.some(s => s.includes('pattern') || s.includes('history'));
+                const hasMismatch = signals.some(s => s.includes('mismatch') || s.includes('transformer'));
+
+                document.getElementById('modalWhyFlagged').innerHTML = `
+                    <li class="why-flagged-item ${hasUnder ? 'triggered' : 'passed'}">
+                        <span class="flag-icon">${hasUnder ? '&#9888;' : '&#10003;'}</span>
+                        <div><strong>Under-Consumption Detected:</strong> Actual reading is ${Math.abs(dev).toFixed(1)}% below baseline expected.</div>
+                    </li>
+                    <li class="why-flagged-item ${hasHighUnder ? 'triggered' : 'passed'}">
+                        <span class="flag-icon">${hasHighUnder ? '&#9888;' : '&#10003;'}</span>
+                        <div><strong>Severe Deviation (&lt; -30%):</strong> Satisfies primary electricity theft threshold.</div>
+                    </li>
+                    <li class="why-flagged-item ${hasTamper ? 'triggered' : 'passed'}">
+                        <span class="flag-icon">${hasTamper ? '&#9888;' : '&#10003;'}</span>
+                        <div><strong>Hardware Tamper Sensor:</strong> Physical cover switch, magnetic sensor, or neutral bypass triggered.</div>
+                    </li>
+                    <li class="why-flagged-item ${hasDrop ? 'triggered' : 'passed'}">
+                        <span class="flag-icon">${hasDrop ? '&#9888;' : '&#10003;'}</span>
+                        <div><strong>Sudden Drop Magnitude:</strong> Telemetry plummeted &gt;40% from previous consecutive reading.</div>
+                    </li>
+                    <li class="why-flagged-item ${hasMismatch ? 'triggered' : 'passed'}">
+                        <span class="flag-icon">${hasMismatch ? '&#9888;' : '&#10003;'}</span>
+                        <div><strong>Transformer Feeder Mismatch:</strong> Associated feeder exhibits unexplained energy deficit.</div>
+                    </li>
+                `;
+
+                // Tamper Timeline
+                const tamperTimeline = document.getElementById('modalTamperTimeline');
+                if (data.tamper_events && data.tamper_events.length > 0) {
+                    tamperTimeline.innerHTML = data.tamper_events.map(ev => `
+                        <div class="tamper-item">
+                            <div class="tamper-time">${new Date(ev.timestamp).toLocaleString()} &bull; ${ev.event_type.replace(/_/g, ' ').toUpperCase()}</div>
+                            <div class="tamper-desc">${ev.details || 'Hardware tamper detected'}</div>
+                            <div class="tamper-sub">Severity: ${ev.severity || 'HIGH'} &bull; Signal: Active Alert</div>
                         </div>
                     `).join('');
                 } else {
-                    feed.innerHTML = '<div class="empty-state">No alerts yet</div>';
+                    tamperTimeline.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-dark-muted);">No hardware tamper switch events logged for this meter.</div>`;
                 }
 
-                // Update chart with meter data
-                await loadChartData();
+                // Link to analysis
+                document.getElementById('btnModalAnalysis').href = `/static/meter_detail.html?meter=${meterId}`;
 
-            } catch (err) {
-                console.error('Dashboard load error:', err);
-            }
-        }
+                // Action notice & buttons
+                activeModalAlertId = givenAlertId || (data.alert ? data.alert.id : null);
+                const notice = document.getElementById('modalActionNotice');
+                const btnInspect = document.getElementById('btnModalInspect');
+                const btnFalse = document.getElementById('btnModalFalseAlarm');
 
-        async function loadChartData() {
-            try {
-                const res = await fetch('/api/meters');
-                const meters = await res.json();
-
-                const labels = meters.map(m => m.meter_id);
-                const actualData = meters.map(m => m.latest_reading?.consumption_kwh || 0);
-                const expectedData = meters.map(m => m.expected_kwh || 0);
-
-                const ctx = document.getElementById('consumptionChart').getContext('2d');
-
-                if (chart) {
-                    chart.data.labels = labels;
-                    chart.data.datasets[0].data = actualData;
-                    chart.data.datasets[1].data = expectedData;
-                    chart.update('none');
+                if (data.status === 'inspection_assigned' || data.status === 'false_alarm') {
+                    notice.style.display = 'block';
+                    notice.style.background = 'rgba(99, 102, 241, 0.15)';
+                    notice.style.color = '#FFF';
+                    notice.innerHTML = `&#10003; Alert already resolved: <strong>${data.status.replace('_', ' ').toUpperCase()}</strong>`;
+                    btnInspect.disabled = true;
+                    btnFalse.disabled = true;
+                } else if (!activeModalAlertId) {
+                    notice.style.display = 'none';
+                    btnInspect.disabled = true;
+                    btnFalse.disabled = true;
                 } else {
-                    chart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: 'Actual (kWh)',
-                                    data: actualData,
-                                    backgroundColor: meters.map(m => {
-                                        const s = m.severity;
-                                        if (s === 'CRITICAL') return 'rgba(255, 23, 68, 0.7)';
-                                        if (s === 'HIGH') return 'rgba(255, 145, 0, 0.7)';
-                                        if (s === 'MEDIUM') return 'rgba(255, 234, 0, 0.7)';
-                                        return 'rgba(0, 230, 118, 0.7)';
-                                    }),
-                                    borderColor: meters.map(m => {
-                                        const s = m.severity;
-                                        if (s === 'CRITICAL') return '#ff1744';
-                                        if (s === 'HIGH') return '#ff9100';
-                                        if (s === 'MEDIUM') return '#ffea00';
-                                        return '#00e676';
-                                    }),
-                                    borderWidth: 1,
-                                    borderRadius: 4,
-                                },
-                                {
-                                    label: 'Expected (kWh)',
-                                    data: expectedData,
-                                    backgroundColor: 'rgba(83, 109, 254, 0.25)',
-                                    borderColor: '#536dfe',
-                                    borderWidth: 1,
-                                    borderRadius: 4,
-                                    borderDash: [3, 3],
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    labels: { color: '#8b8fa3', font: { family: 'Inter', size: 12 } }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
-                                    grid: { color: 'rgba(255,255,255,0.04)' }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
-                                    grid: { color: 'rgba(255,255,255,0.04)' },
-                                    title: { display: true, text: 'kWh', color: '#8b8fa3', font: { family: 'Inter' } }
-                                }
-                            }
-                        }
-                    });
+                    notice.style.display = 'none';
+                    btnInspect.disabled = false;
+                    btnFalse.disabled = false;
                 }
+
             } catch (err) {
-                console.error('Chart load error:', err);
+                console.error('Modal load error:', err);
             }
         }
 
-        // Initial load
+        function closeModal(e) {
+            if (e.target.id === 'investigationModal') {
+                document.getElementById('investigationModal').classList.remove('active');
+            }
+        }
+
+        function closeModalDirect() {
+            document.getElementById('investigationModal').classList.remove('active');
+        }
+
+        async function executeAction(action) {
+            if (!activeModalAlertId) return;
+
+            try {
+                const res = await fetch(`/api/alerts/${activeModalAlertId}/action`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: action })
+                });
+                const result = await res.json();
+
+                const notice = document.getElementById('modalActionNotice');
+                notice.style.display = 'block';
+                if (result.success) {
+                    const isInspect = action === 'inspect';
+                    notice.style.background = isInspect ? 'var(--orange-dim)' : 'var(--green-dim)';
+                    notice.style.color = isInspect ? 'var(--orange)' : 'var(--green)';
+                    notice.innerHTML = isInspect
+                        ? '&#128269; <strong>Inspection Assigned:</strong> Field dispatch team has been notified.'
+                        : '&#10003; <strong>Marked as False Alarm:</strong> Cleared from active threats.';
+
+                    document.getElementById('btnModalInspect').disabled = true;
+                    document.getElementById('btnModalFalseAlarm').disabled = true;
+
+                    // Reload dashboard to reflect changes
+                    setTimeout(loadDashboard, 600);
+                } else {
+                    notice.style.background = 'var(--red-dim)';
+                    notice.style.color = 'var(--red)';
+                    notice.textContent = `Error: ${result.error || 'Failed to update alert'}`;
+                }
+            } catch (err) {
+                console.error('Action error:', err);
+            }
+        }
+
+        // Initial fetch
         loadDashboard();
 
-        // Poll every 5 seconds
+        // 5-second live telemetry refresh
         setInterval(loadDashboard, 5000);
     </script>
 </body>

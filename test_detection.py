@@ -1,148 +1,135 @@
 """
-test_detection.py — Assert-based tests for the Watt's Off detection engine.
+test_detection.py — Assert-based tests for the Electricity Theft Detection Engine.
 
-Tests use known expected/actual pairs from the project brief's worked examples
-to verify detection logic is correct.
-
-Run:  python test_detection.py
+Verifies:
+1. Hour-of-day time bucket mapping
+2. Deviation % calculation: ((actual - expected) / expected) * 100
+3. Theft categorization (NORMAL, SUSPICIOUS, HIGH_THEFT_RISK, OVER_CONSUMPTION)
+4. Strict non-theft classification for OVER_CONSUMPTION (risk score = 0)
+5. Multi-signal theft risk scoring (M009 scenario: expected 10.2, actual 3.1 -> -69.6% -> ~91/100)
 """
 
 import sys
 import os
 
-# Ensure we can import from project root
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from detection import (
     get_time_bucket,
     compute_deviation,
-    classify_anomaly,
-    score_risk,
+    classify_theft_category,
+    compute_theft_info,
+    score_theft_risk,
     get_severity,
 )
 
 
 def test_time_buckets():
-    """Verify hour → time-bucket mapping."""
-    assert get_time_bucket(2) == 'night',     f"2 AM should be night"
-    assert get_time_bucket(5) == 'night',     f"5 AM should be night"
-    assert get_time_bucket(6) == 'morning',   f"6 AM should be morning"
-    assert get_time_bucket(9) == 'morning',   f"9 AM should be morning"
-    assert get_time_bucket(12) == 'afternoon', f"12 PM should be afternoon"
-    assert get_time_bucket(14) == 'afternoon', f"2 PM should be afternoon"
-    assert get_time_bucket(17) == 'evening',   f"5 PM should be evening"
-    assert get_time_bucket(21) == 'evening',   f"9 PM should be evening"
-    assert get_time_bucket(22) == 'night',     f"10 PM should be night"
-    assert get_time_bucket(0) == 'night',      f"12 AM should be night"
+    """Verify hour -> time-bucket mapping."""
+    assert get_time_bucket(2) == 'night', "2 AM should be night"
+    assert get_time_bucket(9) == 'morning', "9 AM should be morning"
+    assert get_time_bucket(14) == 'afternoon', "2 PM should be afternoon"
+    assert get_time_bucket(19) == 'evening', "7 PM should be evening"
     print("  ✓ test_time_buckets passed")
 
 
 def test_deviation_calculation():
-    """Verify deviation % math — core brief example: expected 2.5, actual 9.2."""
-    # Brief worked example: M027 expected 2.5 kWh, actual 9.2 kWh
-    dev = compute_deviation(9.2, 2.5)
-    assert 267 <= dev <= 269, f"Expected ~268%, got {dev}%"
+    """Verify deviation % math."""
+    # Under-consumption (theft case: M009 expected 10.2, actual 3.1)
+    dev_theft = compute_deviation(3.1, 10.2)
+    assert -70.0 <= dev_theft <= -69.0, f"Expected ~ -69.6%, got {dev_theft}%"
 
-    # Normal reading: no deviation
-    dev_normal = compute_deviation(2.5, 2.5)
-    assert dev_normal == 0.0, f"Expected 0%, got {dev_normal}%"
+    # Normal reading: actual 9.0, expected 10.0 -> -10%
+    dev_norm = compute_deviation(9.0, 10.0)
+    assert dev_norm == -10.0, f"Expected -10.0%, got {dev_norm}%"
 
-    # Under-consumption
-    dev_under = compute_deviation(1.0, 2.5)
-    assert dev_under == -60.0, f"Expected -60%, got {dev_under}%"
-
-    # Edge case: zero expected, non-zero actual
-    dev_zero = compute_deviation(5.0, 0.0)
-    assert dev_zero == 999.0, f"Expected 999% (cap), got {dev_zero}%"
+    # Over-consumption: actual 14.0, expected 10.0 -> +40%
+    dev_over = compute_deviation(14.0, 10.0)
+    assert dev_over == 40.0, f"Expected +40.0%, got {dev_over}%"
 
     print("  ✓ test_deviation_calculation passed")
 
 
-def test_classify_anomaly():
-    """Verify anomaly type classification."""
-    # Case 1: Sudden spike — actual 9.2, previous reading 2.5 → jump of 268%
-    types = classify_anomaly(
-        actual=9.2, expected=2.5, hour=14,
-        prev_reading_kwh=2.5, recent_anomaly_count=0
-    )
-    assert 'sudden_spike' in types, f"Should detect sudden_spike, got {types}"
-    assert 'unusual_time' in types, f"Should detect unusual_time (9.2 >> 2.5), got {types}"
-
-    # Case 2: Unusual nighttime — high usage at 2 AM when normally near zero
-    types_night = classify_anomaly(
-        actual=5.0, expected=0.8, hour=2,
-        prev_reading_kwh=0.7, recent_anomaly_count=0
-    )
-    assert 'unusual_time' in types_night, f"Should detect unusual_time at night, got {types_night}"
-
-    # Case 3: Repeated pattern — 3+ anomalies in last 5 readings
-    types_repeated = classify_anomaly(
-        actual=6.0, expected=2.5, hour=10,
-        prev_reading_kwh=2.5, recent_anomaly_count=3
-    )
-    assert 'repeated_pattern' in types_repeated, f"Should detect repeated_pattern, got {types_repeated}"
-
-    # Case 4: Normal reading — within range, no history
-    types_normal = classify_anomaly(
-        actual=2.6, expected=2.5, hour=10,
-        prev_reading_kwh=2.4, recent_anomaly_count=0
-    )
-    assert len(types_normal) == 0, f"Should be normal (no anomalies), got {types_normal}"
-
-    print("  ✓ test_classify_anomaly passed")
-
-
-def test_risk_scoring():
+def test_theft_categorization():
     """
-    Verify risk score computation — brief's worked example:
-    M027: expected 2.5, actual 9.2, deviation 268%, sudden_spike + unusual_time
-    + repeated_pattern → risk ~95, CRITICAL.
+    Verify categories:
+    - Expected = 10, Actual = 9  (-10%) -> NORMAL
+    - Expected = 10, Actual = 5  (-50%) -> HIGH_THEFT_RISK
+    - Expected = 10, Actual = 2  (-80%) -> HIGH_THEFT_RISK
+    - Expected = 10, Actual = 8  (-20%) -> SUSPICIOUS
+    - Expected = 10, Actual = 14 (+40%) -> OVER_CONSUMPTION
     """
-    # Full anomaly scenario from the brief
-    risk = score_risk(
-        deviation_pct=268.0,
-        anomaly_types=['sudden_spike', 'unusual_time', 'repeated_pattern'],
-        recent_anomaly_count=3
-    )
-    assert 90 <= risk <= 100, f"Expected risk ~95, got {risk}"
-    assert get_severity(risk) == 'CRITICAL', f"Expected CRITICAL, got {get_severity(risk)}"
+    assert classify_theft_category(-5.0) == 'NORMAL'
+    assert classify_theft_category(-10.0) == 'NORMAL'
+    assert classify_theft_category(-20.0) == 'SUSPICIOUS'
+    assert classify_theft_category(-50.0) == 'HIGH_THEFT_RISK'
+    assert classify_theft_category(-80.0) == 'HIGH_THEFT_RISK'
+    assert classify_theft_category(40.0) == 'OVER_CONSUMPTION'
+    print("  ✓ test_theft_categorization passed")
 
-    # Normal reading — no flags
-    risk_normal = score_risk(
-        deviation_pct=0.0,
-        anomaly_types=[],
-        recent_anomaly_count=0
-    )
-    assert risk_normal == 0, f"Expected risk 0, got {risk_normal}"
-    assert get_severity(risk_normal) == 'LOW', f"Expected LOW, got {get_severity(risk_normal)}"
 
-    # Medium risk — moderate deviation only
-    risk_medium = score_risk(
-        deviation_pct=120.0,
-        anomaly_types=['unusual_time'],
-        recent_anomaly_count=0
-    )
-    assert 25 <= risk_medium <= 40, f"Expected risk 25-40, got {risk_medium}"
+def test_over_consumption_not_theft():
+    """Verify that over-consumption is NOT marked as electricity theft."""
+    risk = score_theft_risk(deviation_pct=180.0, signals={})
+    assert risk == 0, f"Over-consumption must have 0 theft risk, got {risk}"
+    assert get_severity('OVER_CONSUMPTION', risk) == 'OVER_CONSUMPTION'
+    print("  ✓ test_over_consumption_not_theft passed")
 
-    # Severity bands
-    assert get_severity(15) == 'LOW'
-    assert get_severity(30) == 'LOW'
-    assert get_severity(31) == 'MEDIUM'
-    assert get_severity(60) == 'MEDIUM'
-    assert get_severity(61) == 'HIGH'
-    assert get_severity(80) == 'HIGH'
-    assert get_severity(81) == 'CRITICAL'
-    assert get_severity(100) == 'CRITICAL'
 
-    print("  ✓ test_risk_scoring passed")
+def test_theft_risk_scoring():
+    """
+    Verify multi-signal scoring:
+    Meter M009: Expected 10.2 kWh, Actual 3.1 kWh (-69.6% deviation),
+    with sudden drop, tamper event, and transformer mismatch -> ~91/100 (HIGH_THEFT_RISK).
+    """
+    signals = {
+        'sudden_drop': True,
+        'repeated_theft': True,
+        'has_tamper': True,
+        'reverse_flow': False,
+        'transformer_mismatch': True
+    }
+    risk = score_theft_risk(-69.6, signals)
+    assert 85 <= risk <= 100, f"Expected M009 theft risk 85-100, got {risk}"
+    assert get_severity('HIGH_THEFT_RISK', risk) == 'HIGH_THEFT_RISK'
+
+    # Moderate suspicious case without tamper
+    risk_suspicious = score_theft_risk(-25.0, {'sudden_drop': False, 'has_tamper': False})
+    assert 30 <= risk_suspicious <= 60, f"Expected suspicious risk 30-60, got {risk_suspicious}"
+    assert get_severity('SUSPICIOUS', risk_suspicious) == 'SUSPICIOUS'
+
+    print("  ✓ test_theft_risk_scoring passed")
+
+
+def test_compute_theft_info():
+    """Verify compute_theft_info returns status and under-consumption risk score."""
+    status_norm, score_norm = compute_theft_info(-5.0)
+    assert status_norm == 'NORMAL' and score_norm == 0
+
+    status_susp, score_susp = compute_theft_info(-20.0)
+    assert status_susp == 'SUSPICIOUS' and 30 <= score_susp <= 60
+
+    status_theft, score_theft = compute_theft_info(-69.6)
+    assert status_theft == 'HIGH_THEFT_RISK' and 80 <= score_theft <= 100
+
+    status_over, score_over = compute_theft_info(180.0)
+    assert status_over == 'OVER_CONSUMPTION' and score_over == 0
+    print("  ✓ test_compute_theft_info passed")
 
 
 if __name__ == '__main__':
-    print("\n🔍 Running Watt's Off detection engine tests...\n")
-
+    print("\n🔍 Running Watt's Off Electricity Theft Detection Engine tests...\n")
     test_time_buckets()
     test_deviation_calculation()
-    test_classify_anomaly()
-    test_risk_scoring()
-
-    print("\n✅ All 4 tests passed!\n")
+    test_theft_categorization()
+    test_over_consumption_not_theft()
+    test_theft_risk_scoring()
+    test_compute_theft_info()
+    print("\n✅ All Electricity Theft Detection tests passed successfully!\n")

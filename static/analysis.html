@@ -3,77 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watt's Off — Consumption Analysis</title>
-    <meta name="description" content="Analyze actual vs. expected electricity consumption patterns over time for individual meters.">
+    <title>Watt's Off — Telemetry &amp; Theft Waveform Analysis</title>
+    <meta name="description" content="Compare actual telemetry vs expected baselines across monitored meters to isolate electricity theft.">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-dark-body);
+        }
+        .analysis-page-wrap {
+            padding: 120px 24px 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-brand">
-            <span class="bolt">&#9889;</span> Watt's Off
-        </div>
-        <ul class="nav-links">
-            <li><a href="/static/dashboard.html">Dashboard</a></li>
-            <li><a href="/static/analysis.html" class="active">Analysis</a></li>
-            <li><a href="/static/alerts.html">Alerts</a></li>
-            <li><a href="/static/map.html">Map</a></li>
-        </ul>
-        <div class="nav-user">
-            <span>DISCOM Officer</span>
-            <div class="avatar">DO</div>
-            <a href="/static/login.html" onclick="sessionStorage.clear()" style="margin-left: 8px; font-size: 0.8rem;">Logout</a>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="page">
-        <div class="page-header flex-between">
-            <div>
-                <h1 class="page-title">Consumption Analysis</h1>
-                <p class="page-subtitle">Compare actual vs. expected consumption patterns over time</p>
+    <!-- Floating Pill Nav (Dark) -->
+    <header class="nav-wrapper">
+        <nav class="nav-pill dark-nav">
+            <a href="/static/dashboard.html" class="nav-brand">
+                <div class="nav-brand-icon" style="background:#FFF; color:#000;">&#9889;</div>
+                <div class="nav-brand-text">Watt's <span>Off</span></div>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/static/dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="/static/analysis.html" class="nav-link active">Analysis</a></li>
+                <li><a href="/static/alerts.html" class="nav-link">Alerts</a></li>
+                <li><a href="/static/map.html" class="nav-link">Map</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="/static/login.html" onclick="sessionStorage.clear()" class="btn-pill btn-pill-outline-dark btn-pill-sm">
+                    Logout
+                </a>
             </div>
-            <div style="display: flex; gap: var(--space-md); align-items: center;">
-                <select class="form-input" id="meterSelect" onchange="loadHistory()" style="width: 280px;">
-                    <option value="">Select a meter...</option>
+        </nav>
+    </header>
+
+    <div class="analysis-page-wrap">
+        <!-- Split Header -->
+        <div class="section-header-split">
+            <div>
+                <div class="section-eyebrow">Time-Series Telemetry Analysis</div>
+                <h1 class="section-title">Theft <em>Waveforms</em></h1>
+                <p class="section-desc">
+                    Evaluate 72-hour actual consumption telemetry against dynamic baseline profiles. Severe drops below expected baseline reveal bypass tampering.
+                </p>
+            </div>
+            <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+                <select class="form-input" id="meterSelect" onchange="loadHistory()" style="min-width: 280px; background: #111117;">
+                    <option value="">Select a meter to analyze...</option>
                 </select>
-                <a id="detailLink" href="#" class="btn btn-outline btn-sm hidden">View Detail</a>
+                <a id="detailLink" href="#" class="btn-pill btn-pill-white btn-pill-sm" style="display: none;">
+                    Audit Details &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- Metrics Row for Selected Meter -->
+        <div class="metrics-row" id="statsRow" style="display: none;">
+            <div class="metric-card">
+                <div class="metric-num" id="statAvgActual">--</div>
+                <div class="metric-label">Avg Actual (kWh)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-num"><span class="accent-green" id="statAvgExpected">--</span></div>
+                <div class="metric-label">Avg Baseline (kWh)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-num"><span class="accent-red" id="statMaxUnder">--</span></div>
+                <div class="metric-label">Max Under-use Deficit</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-num"><span id="statTheftStatus" style="font-size: 1.4rem;">--</span></div>
+                <div class="metric-label">Theft Classification</div>
             </div>
         </div>
 
         <!-- Chart Card -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title" id="chartTitle">Actual vs. Expected Consumption</h2>
-                <div id="meterInfo" class="text-muted" style="font-size: 0.8rem;"></div>
+        <div class="bento-card" style="margin-bottom: 60px;">
+            <div class="bento-card-header">
+                <div>
+                    <div class="bento-card-title" id="chartHeading">Actual vs. Expected <em>Telemetry</em></div>
+                    <div style="font-size: 0.8rem; color: var(--text-dark-muted); margin-top: 4px;" id="chartSubtitle">
+                        Please select a meter from the dropdown above
+                    </div>
+                </div>
             </div>
-            <div style="height: 400px; position: relative;">
+            <div style="height: 420px; position: relative;">
                 <canvas id="analysisChart"></canvas>
             </div>
-            <div id="chartEmpty" class="empty-state" style="display: none;">
-                Select a meter above to view its consumption history
+            <div id="chartPlaceholder" style="text-align: center; padding: 80px 20px; color: var(--text-dark-muted);">
+                Select any monitored meter above to visualize its continuous consumption waveform.
             </div>
-        </div>
-
-        <!-- Consumption Stats -->
-        <div class="card mt-lg hidden" id="statsCard">
-            <div class="card-header">
-                <h2 class="card-title">Consumption Statistics</h2>
-            </div>
-            <div class="stat-grid" id="statsGrid"></div>
         </div>
     </div>
 
+    <!-- Giant Watermark Footer -->
+    <footer class="nex-footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <h3>Watt's <em>Off</em></h3>
+                <p>AI-Powered electricity theft detection and telemetry monitoring for Indian DISCOMs.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Portal</h4>
+                <ul>
+                    <li><a href="/static/dashboard.html">Theft Dashboard</a></li>
+                    <li><a href="/static/analysis.html">Waveform Analysis</a></li>
+                    <li><a href="/static/alerts.html">Alerts</a></li>
+                    <li><a href="/static/map.html">Map</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Telemetry</h4>
+                <ul>
+                    <li>Hourly Readings</li>
+                    <li>Expected Baselines</li>
+                    <li>Under-consumption Analysis</li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Regulators</h4>
+                <ul>
+                    <li>DISCOM Surveillance</li>
+                    <li>Smart Meter Security</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-watermark">WATT'S OFF</div>
+        <div class="footer-bottom">
+            <div>&copy; 2026 Watt's Off AI &mdash; Advanced DISCOM Grid Protection.</div>
+            <div>Real-time Consumption Waveform Engine.</div>
+        </div>
+    </footer>
+
     <script>
-        // Auth guard
         if (sessionStorage.getItem('wattsoff_auth') !== 'true') {
             window.location.href = '/static/login.html';
         }
 
         let chart = null;
 
-        // Load meter list for dropdown
         async function loadMeters() {
             try {
                 const res = await fetch('/api/meters');
@@ -83,99 +156,112 @@
                 meters.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.meter_id;
-                    const severity = m.severity || 'LOW';
-                    const icon = severity === 'CRITICAL' ? '🔴' : severity === 'HIGH' ? '🟠' :
-                                 severity === 'MEDIUM' ? '🟡' : '🟢';
-                    opt.textContent = `${m.meter_id} — ${m.consumer_name} (${m.location}) ${icon}`;
+                    const status = m.theft_status || 'NORMAL';
+                    const icon = status === 'HIGH_THEFT_RISK' ? '🔴' :
+                                 status === 'SUSPICIOUS' ? '🟠' :
+                                 status === 'OVER_CONSUMPTION' ? '🟣' : '🟢';
+                    opt.textContent = `${m.meter_id} — ${m.consumer_name} (${status.replace(/_/g, ' ')}) ${icon}`;
                     select.appendChild(opt);
                 });
 
-                // Check URL param for pre-selected meter
                 const params = new URLSearchParams(window.location.search);
                 const preselect = params.get('meter');
                 if (preselect) {
                     select.value = preselect;
                     loadHistory();
+                } else if (meters.length > 0) {
+                    // Default to high-risk M009 if present, or first meter
+                    const m009 = meters.find(m => m.meter_id === 'M009');
+                    select.value = m009 ? 'M009' : meters[0].meter_id;
+                    loadHistory();
                 }
             } catch (err) {
-                console.error('Meter list load error:', err);
+                console.error('Error loading meters:', err);
             }
         }
 
         async function loadHistory() {
             const meterId = document.getElementById('meterSelect').value;
+            const placeholder = document.getElementById('chartPlaceholder');
+            const statsRow = document.getElementById('statsRow');
+            const detailLink = document.getElementById('detailLink');
+
             if (!meterId) {
-                document.getElementById('chartEmpty').style.display = 'block';
-                document.getElementById('statsCard').classList.add('hidden');
-                document.getElementById('detailLink').classList.add('hidden');
+                placeholder.style.display = 'block';
+                statsRow.style.display = 'none';
+                detailLink.style.display = 'none';
                 if (chart) { chart.destroy(); chart = null; }
                 return;
             }
 
-            document.getElementById('chartEmpty').style.display = 'none';
-            document.getElementById('detailLink').classList.remove('hidden');
-            document.getElementById('detailLink').href = `/static/meter_detail.html?meter=${meterId}`;
+            placeholder.style.display = 'none';
+            statsRow.style.display = 'grid';
+            detailLink.style.display = 'inline-flex';
+            detailLink.href = `/static/meter_detail.html?meter=${meterId}`;
 
             try {
+                // Fetch meter detail for status
+                const mRes = await fetch(`/api/meters/${meterId}`);
+                const meterData = await mRes.json();
+                const theftStatus = meterData.theft_status || 'NORMAL';
+                const statTheftEl = document.getElementById('statTheftStatus');
+                statTheftEl.textContent = theftStatus.replace(/_/g, ' ');
+                statTheftEl.style.color = theftStatus === 'HIGH_THEFT_RISK' ? '#FF2D55' :
+                                          theftStatus === 'SUSPICIOUS' ? '#F59E0B' :
+                                          theftStatus === 'OVER_CONSUMPTION' ? '#8B5CF6' : '#00E599';
+
+                // Fetch readings
                 const res = await fetch(`/api/meters/${meterId}/history`);
                 const readings = await res.json();
 
                 if (readings.length === 0) {
-                    document.getElementById('chartEmpty').style.display = 'block';
-                    document.getElementById('chartEmpty').textContent = 'No readings found for this meter';
+                    placeholder.style.display = 'block';
+                    placeholder.textContent = 'No readings available for this meter.';
                     return;
                 }
 
-                // Prepare chart data
+                document.getElementById('chartHeading').innerHTML = `Theft Waveform &mdash; <em>${meterId}</em> (${meterData.consumer_name || ''})`;
+                document.getElementById('chartSubtitle').textContent = `Past 72 readings comparing actual consumption against baseline expected`;
+
                 const labels = readings.map(r => {
                     const d = new Date(r.timestamp);
                     return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) + ' ' +
                            d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
                 });
-                const actualData = readings.map(r => r.consumption_kwh);
+                const actualData = readings.map(r => r.actual_kwh != null ? r.actual_kwh : r.consumption_kwh);
                 const expectedData = readings.map(r => r.expected_kwh);
 
-                // Update chart title
-                document.getElementById('chartTitle').textContent = `Actual vs. Expected — ${meterId}`;
-
-                // Compute stats
+                // Stats calculation
                 const avgActual = actualData.reduce((a, b) => a + b, 0) / actualData.length;
                 const avgExpected = expectedData.reduce((a, b) => a + b, 0) / expectedData.length;
-                const maxActual = Math.max(...actualData);
-                const maxDeviation = Math.max(...actualData.map((a, i) => {
+
+                // Find minimum deviation (greatest negative under-consumption)
+                const deviations = actualData.map((a, i) => {
                     const e = expectedData[i] || 1;
                     return ((a - e) / e) * 100;
-                }));
+                });
+                const minDev = Math.min(...deviations);
 
-                // Show stats
-                document.getElementById('statsCard').classList.remove('hidden');
-                document.getElementById('statsGrid').innerHTML = `
-                    <div class="stat-item">
-                        <div class="stat-label">Avg Actual (kWh)</div>
-                        <div class="stat-value">${avgActual.toFixed(2)}</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Avg Expected (kWh)</div>
-                        <div class="stat-value" style="color: var(--accent);">${avgExpected.toFixed(2)}</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Peak Consumption</div>
-                        <div class="stat-value ${maxActual > avgExpected * 2 ? 'positive' : ''}">${maxActual.toFixed(2)}</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Max Deviation</div>
-                        <div class="stat-value ${maxDeviation > 100 ? 'positive' : ''}">${maxDeviation > 0 ? '+' : ''}${maxDeviation.toFixed(0)}%</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Readings Shown</div>
-                        <div class="stat-value">${readings.length}</div>
-                    </div>
-                `;
+                document.getElementById('statAvgActual').textContent = `${avgActual.toFixed(2)}`;
+                document.getElementById('statAvgExpected').textContent = `${avgExpected.toFixed(2)}`;
+                document.getElementById('statMaxUnder').textContent = `${minDev.toFixed(1)}%`;
 
-                // Build chart
                 const ctx = document.getElementById('analysisChart').getContext('2d');
 
-                if (chart) chart.destroy();
+                // Color line by theft status
+                const lineColor = theftStatus === 'HIGH_THEFT_RISK' ? '#FF2D55' :
+                                  theftStatus === 'SUSPICIOUS' ? '#F59E0B' :
+                                  theftStatus === 'OVER_CONSUMPTION' ? '#8B5CF6' : '#00E599';
+
+                const gradActual = ctx.createLinearGradient(0, 0, 0, 400);
+                gradActual.addColorStop(0, theftStatus === 'HIGH_THEFT_RISK' ? 'rgba(255, 45, 85, 0.4)' : 'rgba(0, 229, 153, 0.3)');
+                gradActual.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+
+                const gradExpected = ctx.createLinearGradient(0, 0, 0, 400);
+                gradExpected.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
+                gradExpected.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+
+                if (chart) { chart.destroy(); }
 
                 chart = new Chart(ctx, {
                     type: 'line',
@@ -183,26 +269,26 @@
                         labels: labels,
                         datasets: [
                             {
-                                label: 'Actual (kWh)',
+                                label: 'Actual Metered (kWh)',
                                 data: actualData,
-                                borderColor: '#ff1744',
-                                backgroundColor: 'rgba(255, 23, 68, 0.1)',
-                                borderWidth: 2,
+                                borderColor: lineColor,
+                                backgroundColor: gradActual,
                                 fill: true,
-                                tension: 0.3,
-                                pointRadius: 2,
+                                tension: 0.35,
+                                borderWidth: 2.5,
+                                pointRadius: 2.5,
                                 pointHoverRadius: 6,
-                                pointBackgroundColor: '#ff1744',
+                                pointBackgroundColor: lineColor,
                             },
                             {
-                                label: 'Expected (kWh)',
+                                label: 'Expected Baseline (kWh)',
                                 data: expectedData,
-                                borderColor: '#536dfe',
-                                backgroundColor: 'rgba(83, 109, 254, 0.05)',
-                                borderWidth: 2,
-                                borderDash: [6, 3],
+                                borderColor: '#06B6D4',
+                                backgroundColor: gradExpected,
                                 fill: true,
-                                tension: 0.3,
+                                tension: 0.35,
+                                borderWidth: 2,
+                                borderDash: [4, 4],
                                 pointRadius: 0,
                                 pointHoverRadius: 4,
                             }
@@ -211,62 +297,49 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            intersect: false,
-                            mode: 'index',
-                        },
+                        interaction: { intersect: false, mode: 'index' },
                         plugins: {
                             legend: {
-                                labels: { color: '#8b8fa3', font: { family: 'Inter', size: 12 } }
+                                labels: {
+                                    color: '#A1A1AA',
+                                    font: { family: 'Plus Jakarta Sans', size: 12, weight: 600 }
+                                }
                             },
                             tooltip: {
-                                backgroundColor: '#1a1f2d',
-                                borderColor: 'rgba(255,255,255,0.1)',
-                                borderWidth: 1,
-                                titleColor: '#e8eaed',
-                                bodyColor: '#8b8fa3',
-                                titleFont: { family: 'Inter', weight: '600' },
-                                bodyFont: { family: 'JetBrains Mono' },
+                                backgroundColor: 'rgba(12, 12, 18, 0.95)',
+                                titleFont: { family: 'Space Mono', size: 12 },
+                                bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
                                 padding: 12,
+                                borderColor: 'rgba(255,255,255,0.15)',
+                                borderWidth: 1,
                                 callbacks: {
-                                    afterBody: function(items) {
-                                        if (items.length >= 2) {
-                                            const actual = items[0].raw;
-                                            const expected = items[1].raw;
-                                            const dev = expected > 0 ? ((actual - expected) / expected * 100) : 0;
-                                            return `Deviation: ${dev > 0 ? '+' : ''}${dev.toFixed(0)}%`;
-                                        }
+                                    afterBody: function(context) {
+                                        const i = context[0].dataIndex;
+                                        const act = actualData[i];
+                                        const exp = expectedData[i];
+                                        const dev = exp > 0 ? (((act - exp) / exp) * 100).toFixed(1) : 0;
+                                        return [`Deviation: ${dev > 0 ? '+' : ''}${dev}%`];
                                     }
                                 }
                             }
                         },
                         scales: {
                             x: {
-                                ticks: {
-                                    color: '#5a5e72',
-                                    font: { family: 'Inter', size: 10 },
-                                    maxTicksLimit: 12,
-                                    maxRotation: 45,
-                                },
-                                grid: { color: 'rgba(255,255,255,0.03)' }
+                                ticks: { color: '#71717A', font: { family: 'Space Mono', size: 10 }, maxTicksLimit: 12 },
+                                grid: { color: 'rgba(255, 255, 255, 0.03)' }
                             },
                             y: {
                                 beginAtZero: true,
-                                ticks: { color: '#8b8fa3', font: { family: 'Inter', size: 11 } },
-                                grid: { color: 'rgba(255,255,255,0.04)' },
-                                title: {
-                                    display: true,
-                                    text: 'Consumption (kWh)',
-                                    color: '#8b8fa3',
-                                    font: { family: 'Inter' }
-                                }
+                                ticks: { color: '#71717A', font: { family: 'Space Mono', size: 11 } },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                title: { display: true, text: 'Consumption (kWh)', color: '#71717A' }
                             }
                         }
                     }
                 });
 
             } catch (err) {
-                console.error('History load error:', err);
+                console.error('Error loading history:', err);
             }
         }
 
