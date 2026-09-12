@@ -416,11 +416,11 @@
                 <div class="nav-brand-text">Watt's <span>Off</span> <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-cyan); letter-spacing: 0.05em; margin-left: 4px; text-transform: uppercase;">Citizen</span></div>
             </a>
             <ul class="nav-menu">
-                <li><a href="#overview" class="nav-link">Overview</a></li>
-                <li><a href="#report-section" onclick="switchPortalTab('report')" class="nav-link active">Report Theft</a></li>
-                <li><a href="#track-section" onclick="switchPortalTab('track')" class="nav-link">Track Status</a></li>
-                <li><a href="#bounty-section" onclick="switchPortalTab('bounty')" class="nav-link">Bounties</a></li>
-                <li><a href="#legal-section" onclick="switchPortalTab('legal')" class="nav-link">Statutory Laws</a></li>
+                <li><a href="#overview" id="navLinkOverview" onclick="scrollToOverview(event)" class="nav-link">Overview</a></li>
+                <li><a href="#report-section" id="navLinkReport" onclick="switchPortalTab('report', true, event)" class="nav-link active">Report Theft</a></li>
+                <li><a href="#track-section" id="navLinkTrack" onclick="switchPortalTab('track', true, event)" class="nav-link">Track Status</a></li>
+                <li><a href="#bounty-section" id="navLinkBounty" onclick="switchPortalTab('bounty', true, event)" class="nav-link">Bounties</a></li>
+                <li><a href="#legal-section" id="navLinkLegal" onclick="switchPortalTab('legal', true, event)" class="nav-link">Statutory Laws</a></li>
                 <li><a href="/static/dashboard.html" class="nav-link" style="color: var(--text-light-muted);">Officer Admin &#8599;</a></li>
             </ul>
             <div class="nav-actions">
@@ -468,13 +468,13 @@
         </p>
 
         <div class="hero-cta-group">
-            <a href="#report-section" onclick="switchPortalTab('report')" class="btn-pill btn-pill-dark btn-pill-lg">
+            <a href="#report-section" onclick="switchPortalTab('report', true, event)" class="btn-pill btn-pill-dark btn-pill-lg">
                 File Theft Report &#8600;
             </a>
-            <a href="#track-section" onclick="switchPortalTab('track')" class="btn-pill btn-pill-outline btn-pill-lg">
+            <a href="#track-section" onclick="switchPortalTab('track', true, event)" class="btn-pill btn-pill-outline btn-pill-lg">
                 Track Existing Ticket &#8599;
             </a>
-            <button onclick="handleCitizenFirebaseSignIn()" class="btn-pill btn-pill-outline btn-pill-lg" style="background: rgba(66, 133, 244, 0.08); border-color: rgba(66, 133, 244, 0.3);">
+            <button id="heroAuthBtn" onclick="handleHeroAuthClick()" class="btn-pill btn-pill-outline btn-pill-lg" style="background: rgba(66, 133, 244, 0.08); border-color: rgba(66, 133, 244, 0.3); transition: all 0.2s ease;">
                 &#128273; Google Verified Login
             </button>
         </div>
@@ -580,21 +580,25 @@
             </div>
 
             <!-- THE CITIZEN INTERACTIVE CONSOLE -->
-            <div id="citizenConsoleSection" style="margin-top: 70px;">
+            <div id="citizenConsoleSection" style="margin-top: 70px; scroll-margin-top: 90px;">
+                <div id="report-section" style="scroll-margin-top: 90px;"></div>
+                <div id="track-section" style="scroll-margin-top: 90px;"></div>
+                <div id="bounty-section" style="scroll-margin-top: 90px;"></div>
+                <div id="legal-section" style="scroll-margin-top: 90px;"></div>
                 
                 <!-- Pill Tabs -->
                 <div class="console-tabs-wrap">
                     <div class="console-pill-tabs">
-                        <button class="console-tab-btn active" id="tabBtnReport" onclick="switchPortalTab('report')">
+                        <button class="console-tab-btn active" id="tabBtnReport" onclick="switchPortalTab('report', true)">
                             &#9997; File Theft Report
                         </button>
-                        <button class="console-tab-btn" id="tabBtnTrack" onclick="switchPortalTab('track')">
+                        <button class="console-tab-btn" id="tabBtnTrack" onclick="switchPortalTab('track', true)">
                             &#128269; Live Tracking Stepper
                         </button>
-                        <button class="console-tab-btn" id="tabBtnBounty" onclick="switchPortalTab('bounty')">
+                        <button class="console-tab-btn" id="tabBtnBounty" onclick="switchPortalTab('bounty', true)">
                             &#128176; Bounty Calculator
                         </button>
-                        <button class="console-tab-btn" id="tabBtnLegal" onclick="switchPortalTab('legal')">
+                        <button class="console-tab-btn" id="tabBtnLegal" onclick="switchPortalTab('legal', true)">
                             &#9878; Whistleblower Laws &amp; FAQs
                         </button>
                     </div>
@@ -1090,10 +1094,10 @@
             <div>
                 <h5 style="color: #FFF; font-size: 0.95rem; font-weight: 700; margin-bottom: 16px;">Citizen Quick Links</h5>
                 <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; color: var(--text-dark-muted);">
-                    <li><a href="#report-section" onclick="switchPortalTab('report')" style="color: var(--text-dark-muted);">File Theft Report</a></li>
-                    <li><a href="#track-section" onclick="switchPortalTab('track')" style="color: var(--text-dark-muted);">Live Ticket Stepper</a></li>
-                    <li><a href="#bounty-section" onclick="switchPortalTab('bounty')" style="color: var(--text-dark-muted);">Bounty Calculator</a></li>
-                    <li><a href="#legal-section" onclick="switchPortalTab('legal')" style="color: var(--text-dark-muted);">Whistleblower Law FAQ</a></li>
+                    <li><a href="#report-section" onclick="switchPortalTab('report', true, event)" style="color: var(--text-dark-muted);">File Theft Report</a></li>
+                    <li><a href="#track-section" onclick="switchPortalTab('track', true, event)" style="color: var(--text-dark-muted);">Live Ticket Stepper</a></li>
+                    <li><a href="#bounty-section" onclick="switchPortalTab('bounty', true, event)" style="color: var(--text-dark-muted);">Bounty Calculator</a></li>
+                    <li><a href="#legal-section" onclick="switchPortalTab('legal', true, event)" style="color: var(--text-dark-muted);">Whistleblower Law FAQ</a></li>
                 </ul>
             </div>
 
@@ -1174,11 +1178,28 @@
                     navAvatarEl.textContent = name.charAt(0).toUpperCase();
                 }
                 if (navSignInBtn) navSignInBtn.style.display = 'none';
+
+                // Update Hero Action Button
+                const heroAuthBtn = document.getElementById('heroAuthBtn');
+                if (heroAuthBtn) {
+                    heroAuthBtn.innerHTML = `&#10003; Signed in as ${name.split(' ')[0]} &bull; Report Theft &rarr;`;
+                    heroAuthBtn.style.background = 'rgba(16, 185, 129, 0.12)';
+                    heroAuthBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    heroAuthBtn.style.color = '#065F46';
+                }
             } else {
                 // User is NOT authenticated
                 if (verifiedStrip) verifiedStrip.style.display = 'none';
                 if (navBadge) navBadge.style.display = 'none';
                 if (navSignInBtn) navSignInBtn.style.display = 'inline-flex';
+
+                const heroAuthBtn = document.getElementById('heroAuthBtn');
+                if (heroAuthBtn) {
+                    heroAuthBtn.innerHTML = `&#128273; Google Verified Login`;
+                    heroAuthBtn.style.background = 'rgba(66, 133, 244, 0.08)';
+                    heroAuthBtn.style.borderColor = 'rgba(66, 133, 244, 0.3)';
+                    heroAuthBtn.style.color = '';
+                }
 
                 // Check if user has already unlocked anonymous form
                 if (document.getElementById('anonToggle') && document.getElementById('anonToggle').checked) {
@@ -1191,12 +1212,23 @@
             }
         }
 
+        // Handle Hero Login / Action Button Click
+        async function handleHeroAuthClick() {
+            const isAuth = sessionStorage.getItem('wattsoff_google_auth') === 'true';
+            if (isAuth) {
+                switchPortalTab('report', true);
+            } else {
+                await handleCitizenFirebaseSignIn();
+            }
+        }
+
         // Handle Firebase Google Sign-In
         async function handleCitizenFirebaseSignIn() {
             try {
                 const res = await signInWithGoogleFirebase();
                 if (res && res.success) {
                     checkFirebaseGoogleAuth();
+                    switchPortalTab('report', true);
                 }
             } catch (err) {
                 console.error("[Firebase Auth] Error:", err);
@@ -1212,8 +1244,22 @@
             checkFirebaseGoogleAuth();
         }
 
-        // Switch between Portal Tabs (Report, Track, Bounty, Legal)
-        function switchPortalTab(tabName) {
+        // Scroll to Overview / Hero top
+        function scrollToOverview(evt) {
+            if (evt && evt.preventDefault) evt.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.querySelectorAll('.nav-menu .nav-link').forEach(l => l.classList.remove('active'));
+            const ov = document.getElementById('navLinkOverview');
+            if (ov) ov.classList.add('active');
+            try { history.replaceState(null, null, '#overview'); } catch (e) {}
+        }
+
+        // Switch between Portal Tabs (Report, Track, Bounty, Legal) and smoothly scroll
+        function switchPortalTab(tabName, shouldScroll = true, evt = null) {
+            if (evt && evt.preventDefault) {
+                evt.preventDefault();
+            }
+
             const panels = {
                 'report': document.getElementById('panelReport'),
                 'track': document.getElementById('panelTrack'),
@@ -1226,6 +1272,13 @@
                 'bounty': document.getElementById('tabBtnBounty'),
                 'legal': document.getElementById('tabBtnLegal')
             };
+            const navLinks = {
+                'report': document.getElementById('navLinkReport'),
+                'track': document.getElementById('navLinkTrack'),
+                'bounty': document.getElementById('navLinkBounty'),
+                'legal': document.getElementById('navLinkLegal'),
+                'overview': document.getElementById('navLinkOverview')
+            };
 
             Object.keys(panels).forEach(key => {
                 if (panels[key]) panels[key].style.display = (key === tabName) ? 'block' : 'none';
@@ -1235,6 +1288,12 @@
                 }
             });
 
+            // Update active state in nav menu
+            document.querySelectorAll('.nav-menu .nav-link').forEach(l => l.classList.remove('active'));
+            if (navLinks[tabName]) {
+                navLinks[tabName].classList.add('active');
+            }
+
             if (tabName === 'report') {
                 checkFirebaseGoogleAuth();
             } else if (tabName === 'track') {
@@ -1242,8 +1301,30 @@
                 if (trackInputVal && document.getElementById('trackResult').style.display === 'none') {
                     fetchComplaintTracking();
                 }
+                setTimeout(() => {
+                    const input = document.getElementById('trackInput');
+                    if (input) input.focus();
+                }, 200);
             } else if (tabName === 'bounty') {
                 runBountyCalculator();
+            }
+
+            // Sync URL hash
+            try {
+                const targetHash = '#' + tabName + '-section';
+                if (window.location.hash !== targetHash) {
+                    history.replaceState(null, null, targetHash);
+                }
+            } catch (e) {}
+
+            // Smoothly scroll to the interactive console section with offset for fixed header
+            if (shouldScroll) {
+                const target = document.getElementById('citizenConsoleSection');
+                if (target) {
+                    const yOffset = -90; // Header height + breathing room
+                    const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+                }
             }
         }
 
@@ -1637,6 +1718,25 @@
             });
         }
 
+        // Handle URL hash changes
+        function handleHashRouting() {
+            const hash = window.location.hash;
+            if (!hash) return;
+            if (hash === '#track-section' || hash === '#track') {
+                switchPortalTab('track', true);
+            } else if (hash === '#bounty-section' || hash === '#bounty') {
+                switchPortalTab('bounty', true);
+            } else if (hash === '#legal-section' || hash === '#legal') {
+                switchPortalTab('legal', true);
+            } else if (hash === '#report-section' || hash === '#report') {
+                switchPortalTab('report', true);
+            } else if (hash === '#overview') {
+                scrollToOverview();
+            }
+        }
+
+        window.addEventListener('hashchange', handleHashRouting);
+
         // Initialize on load based on URL hash and listen to Firebase auth
         window.addEventListener('DOMContentLoaded', () => {
             checkFirebaseGoogleAuth();
@@ -1645,14 +1745,10 @@
             });
 
             const hash = window.location.hash;
-            if (hash === '#track-section' || hash === '#track') {
-                switchPortalTab('track');
-            } else if (hash === '#bounty-section' || hash === '#bounty') {
-                switchPortalTab('bounty');
-            } else if (hash === '#legal-section' || hash === '#legal') {
-                switchPortalTab('legal');
+            if (hash && hash !== '#overview') {
+                setTimeout(() => handleHashRouting(), 200);
             } else {
-                switchPortalTab('report');
+                switchPortalTab('report', false);
             }
 
             // Init 3D Scene
