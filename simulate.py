@@ -476,13 +476,64 @@ def seed_complaints(db):
             'remarks': 'Raid conducted. Reverse flow and physical tamper confirmed. Assessment penalty of ₹84,200 levied under Sec 135 Electricity Act.',
             'created_at': (now - timedelta(days=1, hours=2)).isoformat(),
             'updated_at': (now - timedelta(hours=1)).isoformat()
+        },
+        {
+            'ticket_id': 'CIT-2026-5120',
+            'complainant_name': 'Alok Sengupta',
+            'complainant_phone': '+91 98711 34990',
+            'is_anonymous': 0,
+            'location': 'Karol Bagh Commercial Hub, Main Ajmal Khan Rd',
+            'landmark': 'Feeder DT-04 Junction Pole #22',
+            'theft_type': 'Direct Hooking (Katia Wire)',
+            'description': 'Heavy gauge tapping hooked directly onto low-voltage line powering commercial banquet lights.',
+            'photo_filename': 'katia_hooking.svg',
+            'status': 'RESOLVED',
+            'stage': 5,
+            'assigned_team': 'DISCOM Flying Squad #1 - Central',
+            'remarks': 'Raid finalized. Illicit 18kW hook dismantled. ₹18,200 citizen bounty disbursed via NEFT under DISCOM Whistleblower Scheme.',
+            'created_at': (now - timedelta(days=2, hours=4)).isoformat(),
+            'updated_at': (now - timedelta(hours=6)).isoformat()
+        },
+        {
+            'ticket_id': 'CIT-2026-4412',
+            'complainant_name': 'Anonymous Whistleblower #4092',
+            'complainant_phone': '+91 98100 00000',
+            'is_anonymous': 1,
+            'location': 'Okhla Industrial Area Phase 2, Shed 14',
+            'landmark': 'Opposite Substation Feeder 7',
+            'theft_type': 'Meter Bypass / Shunt Wire',
+            'description': 'Underground heavy 35kW tap bypassing high-tension commercial meter for industrial molding machinery.',
+            'photo_filename': 'meter_bypass.svg',
+            'status': 'RESOLVED',
+            'stage': 5,
+            'assigned_team': 'Special Vigilance Anti-Power Theft Police',
+            'remarks': 'Major industrial theft busted. Recovery assessment of ₹4,20,000 served. ₹42,500 disbursed to verified informant UPI.',
+            'created_at': (now - timedelta(days=3, hours=8)).isoformat(),
+            'updated_at': (now - timedelta(days=1)).isoformat()
+        },
+        {
+            'ticket_id': 'CIT-2026-7674',
+            'complainant_name': 'Citizen Informant',
+            'complainant_phone': '+91 98734 51290',
+            'is_anonymous': 0,
+            'location': 'Karol Bagh Market Road, Block 3',
+            'landmark': 'Near DT-04 Distribution Transformer',
+            'theft_type': 'Direct Hooking (Katia Wire)',
+            'description': 'Commercial unmetered tap observed overhead. Night load spiking on local feeder.',
+            'photo_filename': 'katia_hooking.svg',
+            'status': 'UNDER_INVESTIGATION',
+            'stage': 3,
+            'assigned_team': 'DISCOM Vigilance Squad #4 - Central Zone',
+            'remarks': 'AI Alert: Correlated with DT-04 (Karol Bagh) telemetry showing 23.9% unaccounted loss. Inspection team en route.',
+            'created_at': (now - timedelta(hours=1, minutes=30)).isoformat(),
+            'updated_at': (now - timedelta(minutes=20)).isoformat()
         }
     ]
 
     for c in complaints:
         google_email = 'whistleblower.delhi@gmail.com' if not c['is_anonymous'] else 'anonymous.informant@gmail.com'
         db.execute(
-            """INSERT INTO complaints (
+            """INSERT OR REPLACE INTO complaints (
                 ticket_id, complainant_name, complainant_phone, google_email, is_anonymous,
                 location, landmark, theft_type, description, photo_filename,
                 status, stage, assigned_team, remarks, created_at, updated_at
