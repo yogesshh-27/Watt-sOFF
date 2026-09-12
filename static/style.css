@@ -162,6 +162,8 @@ button, input, select {
     font-size: 1.25rem;
     letter-spacing: -0.02em;
     color: var(--text-light-title);
+    flex-shrink: 0;
+    margin-right: 16px;
 }
 
 .nav-pill.dark-nav .nav-brand {
@@ -208,8 +210,9 @@ button, input, select {
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: clamp(14px, 1.8vw, 24px);
     list-style: none;
+    flex-shrink: 0;
 }
 
 .nav-link {

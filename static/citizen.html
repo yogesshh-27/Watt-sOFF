@@ -411,7 +411,7 @@
     <!-- Floating Pill Navigation (NexStudio style) -->
     <header class="nav-wrapper">
         <nav class="nav-pill" id="mainNav">
-            <a href="/static/citizen.html" class="nav-brand">
+            <a href="/static/citizen.html" class="nav-brand" style="margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(0, 0, 0, 0.08); flex-shrink: 0;">
                 <div class="nav-brand-icon">&#9889;</div>
                 <div class="nav-brand-text">Watt's <span>Off</span> <span style="font-size: 0.7rem; font-weight: 600; color: var(--accent-cyan); letter-spacing: 0.05em; margin-left: 4px; text-transform: uppercase;">Citizen</span></div>
             </a>
@@ -424,16 +424,16 @@
                 <li><a href="/static/dashboard.html" class="nav-link" style="color: var(--text-light-muted);">Officer Admin &#8599;</a></li>
             </ul>
             <div class="nav-actions">
-                <!-- Verified User Avatar (Shown when logged in via Firebase) -->
-                <div id="navUserBadge" style="display: none; align-items: center; gap: 10px; margin-right: 4px;">
-                    <div id="navAvatar" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4);">
+                <!-- Verified User Chip (Shown when logged in via Firebase) -->
+                <div id="navUserBadge" style="display: none; align-items: center; gap: 8px; margin-right: 4px; background: rgba(0, 0, 0, 0.04); border: 1px solid rgba(0, 0, 0, 0.08); padding: 3px 6px 3px 4px; border-radius: var(--radius-full); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);">
+                    <div id="navAvatar" style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; box-shadow: 0 2px 6px rgba(6, 182, 212, 0.35); flex-shrink: 0; overflow: hidden;">
                         C
                     </div>
-                    <div style="font-size: 0.85rem; font-weight: 700; color: #0A0A0C;">
-                        <span id="navUserName">Citizen</span>
-                        <span style="color: var(--green); font-size: 0.75rem; margin-left: 2px;">&#10004;</span>
+                    <div style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; padding-left: 2px;">
+                        <span id="navUserName" style="font-size: 0.82rem; font-weight: 700; color: #0A0A0C; letter-spacing: -0.01em;">Citizen</span>
+                        <span title="Verified with Google" style="display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: #10B981; color: #FFFFFF; font-size: 9px; line-height: 1; flex-shrink: 0; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);">&#10003;</span>
                     </div>
-                    <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 4px 10px; font-size: 0.75rem;">
+                    <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 3px 9px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-color: rgba(0, 0, 0, 0.12); color: #4B5563; background: #FFFFFF; border-radius: var(--radius-full); white-space: nowrap; line-height: 1.2; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                         Sign Out
                     </button>
                 </div>
@@ -1151,7 +1151,13 @@
                 // Update citizen banner & pre-fill verified name
                 document.getElementById('bannerUserName').textContent = name;
                 document.getElementById('bannerUserEmail').textContent = email;
-                document.getElementById('userAvatarCircle').textContent = name.charAt(0).toUpperCase();
+                const photo = sessionStorage.getItem('wattsoff_citizen_photo');
+                const userAvatarCircle = document.getElementById('userAvatarCircle');
+                if (photo) {
+                    userAvatarCircle.innerHTML = `<img src="${photo}" alt="${name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" referrerpolicy="no-referrer">`;
+                } else {
+                    userAvatarCircle.textContent = name.charAt(0).toUpperCase();
+                }
                 document.getElementById('googleEmailInput').value = email;
 
                 if (!document.getElementById('anonToggle').checked) {
@@ -1161,7 +1167,12 @@
                 // Update nav user badge
                 if (navBadge) navBadge.style.display = 'inline-flex';
                 document.getElementById('navUserName').textContent = name.split(' ')[0];
-                document.getElementById('navAvatar').textContent = name.charAt(0).toUpperCase();
+                const navAvatarEl = document.getElementById('navAvatar');
+                if (photo) {
+                    navAvatarEl.innerHTML = `<img src="${photo}" alt="${name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" referrerpolicy="no-referrer">`;
+                } else {
+                    navAvatarEl.textContent = name.charAt(0).toUpperCase();
+                }
                 if (navSignInBtn) navSignInBtn.style.display = 'none';
             } else {
                 // User is NOT authenticated
