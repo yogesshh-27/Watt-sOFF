@@ -619,12 +619,12 @@ def list_alerts():
     alerts = rows_to_list(db.execute(
         """SELECT al.*, an.status as anomaly_status, an.anomaly_type,
                   an.actual_kwh, an.expected_kwh, an.deviation_pct,
-                  an.theft_status, an.theft_signals,
+                  an.theft_status, an.theft_signals, an.theft_risk_score,
                   m.consumer_name, m.location, m.transformer_id
            FROM alerts al
            JOIN anomalies an ON al.anomaly_id = an.id
            JOIN meters m ON al.meter_id = m.meter_id
-           ORDER BY al.theft_risk_score DESC, al.created_at DESC"""
+           ORDER BY an.theft_risk_score DESC, al.created_at DESC"""
     ).fetchall())
 
     # Add boolean flag for easy frontend filtering

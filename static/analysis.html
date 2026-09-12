@@ -221,7 +221,17 @@
                 }
 
                 document.getElementById('chartHeading').innerHTML = `Theft Waveform &mdash; <em>${meterId}</em> (${meterData.consumer_name || ''})`;
-                document.getElementById('chartSubtitle').textContent = `Past 72 readings comparing actual consumption against baseline expected`;
+                let subText = `Past 72 readings comparing actual consumption against baseline expected`;
+                if (theftStatus === 'HIGH_THEFT_RISK') {
+                    subText = `Past 72 readings &bull; <strong style="color:var(--red);">&#9888; Theft Risk: Expected baseline is much higher than actual metered reading</strong>`;
+                } else if (theftStatus === 'SUSPICIOUS') {
+                    subText = `Past 72 readings &bull; <strong style="color:var(--orange);">&#9888; Suspicious under-consumption below expected baseline</strong>`;
+                } else if (theftStatus === 'OVER_CONSUMPTION') {
+                    subText = `Past 72 readings &bull; <strong style="color:var(--accent-electric);">&#9889; High demand load surge above baseline (Not theft)</strong>`;
+                } else {
+                    subText = `Past 72 readings &bull; <strong style="color:var(--green);">&#10004; Normal steady 24x7 consumption</strong>`;
+                }
+                document.getElementById('chartSubtitle').innerHTML = subText;
 
                 const labels = readings.map(r => {
                     const d = new Date(r.timestamp);

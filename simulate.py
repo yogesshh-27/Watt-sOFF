@@ -61,20 +61,20 @@ METERS = [
     {'meter_id': 'M038', 'consumer_name': 'Lakshmi Dairy',        'location': 'Chandni Chowk', 'lat': 28.6506, 'lng': 77.2300, 'transformer_id': 'DT-07'},
 ]
 
-# Expected consumption baselines (kWh) by time bucket
+# Expected consumption baselines (kWh) by time bucket — near-constant 24x7 consumption
 CONSUMPTION_PROFILES = {
-    'M001': {'morning': 2.0, 'afternoon': 1.8, 'evening': 3.0, 'night': 0.5},   # residential normal
-    'M005': {'morning': 4.5, 'afternoon': 5.0, 'evening': 4.0, 'night': 0.8},   # electronics shop (over-consumption test)
-    'M009': {'morning': 8.5, 'afternoon': 10.2, 'evening': 9.0, 'night': 3.0},  # high-energy commercial (M009 brief theft: expected 10.2, actual 3.1)
-    'M012': {'morning': 8.0, 'afternoon': 9.0, 'evening': 7.0, 'night': 3.0},   # cold storage (normal 24/7)
-    'M014': {'morning': 3.5, 'afternoon': 4.0, 'evening': 2.0, 'night': 0.4},   # textiles factory (suspicious test: expected 4.0, actual 2.8)
-    'M018': {'morning': 3.0, 'afternoon': 2.5, 'evening': 4.5, 'night': 1.0},   # apartments
-    'M021': {'morning': 2.5, 'afternoon': 3.5, 'evening': 2.0, 'night': 0.3},   # workshop
-    'M025': {'morning': 5.0, 'afternoon': 4.0, 'evening': 1.5, 'night': 0.5},   # school
-    'M027': {'morning': 7.0, 'afternoon': 8.5, 'evening': 8.0, 'night': 2.0},   # grocery with cooling (theft test: expected 8.5, actual 1.8)
-    'M031': {'morning': 1.8, 'afternoon': 1.5, 'evening': 2.8, 'night': 0.4},   # residential
-    'M034': {'morning': 7.0, 'afternoon': 8.5, 'evening': 7.5, 'night': 5.0},   # hospital
-    'M038': {'morning': 3.0, 'afternoon': 3.5, 'evening': 2.5, 'night': 0.3},   # dairy
+    'M001': {'morning': 2.3, 'afternoon': 2.2, 'evening': 2.5, 'night': 2.1},   # residential normal (~2.3 kWh steady 24x7)
+    'M005': {'morning': 4.7, 'afternoon': 4.8, 'evening': 4.6, 'night': 4.4},   # electronics shop (~4.6 kWh steady)
+    'M009': {'morning': 9.8, 'afternoon': 10.2, 'evening': 10.0, 'night': 9.6},  # commercial heavy load (~10.0 kWh steady 24x7)
+    'M012': {'morning': 8.9, 'afternoon': 9.1, 'evening': 9.0, 'night': 8.8},   # cold storage 24/7 (~9.0 kWh steady)
+    'M014': {'morning': 3.9, 'afternoon': 4.1, 'evening': 4.0, 'night': 3.8},   # textiles factory (~4.0 kWh steady)
+    'M018': {'morning': 3.7, 'afternoon': 3.6, 'evening': 4.0, 'night': 3.5},   # apartments (~3.7 kWh steady)
+    'M021': {'morning': 3.3, 'afternoon': 3.5, 'evening': 3.2, 'night': 3.0},   # workshop (~3.2 kWh steady)
+    'M025': {'morning': 3.9, 'afternoon': 3.8, 'evening': 3.6, 'night': 3.5},   # school (~3.7 kWh steady)
+    'M027': {'morning': 8.3, 'afternoon': 8.6, 'evening': 8.4, 'night': 8.1},   # grocery with cooling 24/7 (~8.4 kWh steady)
+    'M031': {'morning': 2.3, 'afternoon': 2.2, 'evening': 2.5, 'night': 2.1},   # residential (~2.3 kWh steady)
+    'M034': {'morning': 8.4, 'afternoon': 8.6, 'evening': 8.5, 'night': 8.2},   # hospital 24/7 (~8.4 kWh steady)
+    'M038': {'morning': 3.5, 'afternoon': 3.7, 'evening': 3.6, 'night': 3.3},   # dairy 24/7 (~3.5 kWh steady)
 }
 
 NOISE_FACTOR = 0.08
@@ -125,10 +125,20 @@ def seed_meters(db):
 
 
 def seed_historical_readings(db):
-    """Backfill 5 days of normal readings per meter."""
+    """
+    Backfill 5 days of readings per meter (hourly telemetry).
+    - Normal meters: consumption stays near constant 24x7 (people use electricity 24x7).
+    - Theft / Risk meters (M009, M027, M014): recent window shows active tampering where
+      actual metered reading drops significantly below expected baseline.
+    """
     now = datetime.now()
     start = now - timedelta(days=BACKFILL_DAYS)
     count = 0
+
+    theft_start_m009 = now - timedelta(hours=36)
+    theft_start_m027 = now - timedelta(hours=30)
+    theft_start_m014 = now - timedelta(hours=36)
+    surge_start_m005 = now - timedelta(hours=14)
 
     for meter in METERS:
         mid = meter['meter_id']
@@ -139,13 +149,30 @@ def seed_historical_readings(db):
             hour = current.hour
             bucket = get_time_bucket(hour)
             base_kwh = profile[bucket]
-            reading_kwh = add_noise(base_kwh)
             season = get_season_from_date(current)
+            reverse_flow = 0
+
+            if mid == 'M009' and current >= theft_start_m009:
+                # High Theft: Rotor slowed / bypassed with Neodymium magnet, actual is ~3.0 kWh (Expected is ~10.0 kWh)
+                reading_kwh = round(base_kwh * random.uniform(0.28, 0.33), 2)
+            elif mid == 'M027' and current >= theft_start_m027:
+                # High Theft: Reverse flow / terminal bypass jumper, actual is ~1.8 kWh (Expected is ~8.5 kWh)
+                reading_kwh = round(base_kwh * random.uniform(0.20, 0.25), 2)
+                reverse_flow = 1
+            elif mid == 'M014' and current >= theft_start_m014:
+                # Suspicious under-consumption: actual is ~2.8 kWh (Expected is ~4.0 kWh)
+                reading_kwh = round(base_kwh * random.uniform(0.68, 0.74), 2)
+            elif mid == 'M005' and current >= surge_start_m005:
+                # Commercial over-consumption surge: actual is ~13.5 kWh (Expected is ~4.7 kWh)
+                reading_kwh = round(base_kwh * random.uniform(2.7, 3.1), 2)
+            else:
+                # Normal 24x7 consumption: stays near constant around base
+                reading_kwh = add_noise(base_kwh)
 
             db.execute(
                 """INSERT INTO readings (meter_id, timestamp, consumption_kwh, hour, season, voltage_v, current_a, reverse_flow)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (mid, current.isoformat(), reading_kwh, hour, season, 230.0 + random.uniform(-3, 3), round(reading_kwh * 4.3, 2), 0)
+                (mid, current.isoformat(), reading_kwh, hour, season, 230.0 + random.uniform(-3, 3), round(reading_kwh * 4.3, 2), reverse_flow)
             )
             current += timedelta(hours=1)
             count += 1
@@ -155,42 +182,21 @@ def seed_historical_readings(db):
 
 
 def compute_baselines(db):
-    """Precompute baselines table."""
-    buckets = {
-        'morning':   (6, 11),
-        'afternoon': (12, 16),
-        'evening':   (17, 21),
-    }
+    """
+    Precompute baselines table representing the true expected 24x7 consumption
+    for each meter based on its connected load and verified baseline profile.
+    """
+    buckets = ['morning', 'afternoon', 'evening', 'night']
     count = 0
-
     for meter in METERS:
         mid = meter['meter_id']
-        # Night bucket
-        cursor = db.execute(
-            "SELECT AVG(consumption_kwh) as avg_kwh FROM readings WHERE meter_id = ? AND (hour >= 22 OR hour <= 5)",
-            (mid,)
-        )
-        row = cursor.fetchone()
-        avg = row['avg_kwh'] if row and row['avg_kwh'] else CONSUMPTION_PROFILES[mid]['night']
-        db.execute(
-            "INSERT OR REPLACE INTO baselines (meter_id, time_bucket, avg_kwh) VALUES (?, ?, ?)",
-            (mid, 'night', round(avg, 2))
-        )
-        count += 1
-
-        for bucket_name, (h_start, h_end) in buckets.items():
-            cursor = db.execute(
-                "SELECT AVG(consumption_kwh) as avg_kwh FROM readings WHERE meter_id = ? AND hour >= ? AND hour <= ?",
-                (mid, h_start, h_end)
-            )
-            row = cursor.fetchone()
-            avg = row['avg_kwh'] if row and row['avg_kwh'] else CONSUMPTION_PROFILES[mid][bucket_name]
+        for bucket in buckets:
+            expected_val = CONSUMPTION_PROFILES[mid][bucket]
             db.execute(
                 "INSERT OR REPLACE INTO baselines (meter_id, time_bucket, avg_kwh) VALUES (?, ?, ?)",
-                (mid, bucket_name, round(avg, 2))
+                (mid, bucket, round(expected_val, 2))
             )
             count += 1
-
     db.commit()
     print(f"[simulate] Computed {count} baseline values")
 
@@ -278,14 +284,14 @@ def inject_theft_scenarios(db):
     print("[simulate] Injecting theft and non-theft telemetry scenarios...")
 
     # --- Scenario 1: M009 (Civil Lines) — HIGH THEFT RISK ---
-    # 1. Normal reading prior to theft
+    # 1. Prior reading in active theft window (sustained under-consumption)
     db.execute(
         "INSERT INTO readings (meter_id, timestamp, consumption_kwh, hour, season) VALUES (?, ?, ?, ?, ?)",
-        ('M009', (now - timedelta(minutes=45)).isoformat(), 10.1, hour, season)
+        ('M009', (now - timedelta(minutes=45)).isoformat(), 3.0, hour, season)
     )
     db.commit()
 
-    # 2. Sudden theft drop to 3.1 kWh (tamper active)
+    # 2. Latest theft reading: 3.1 kWh (tamper active)
     ts_m009 = (now - timedelta(minutes=11)).isoformat()
     cur = db.execute(
         "INSERT INTO readings (meter_id, timestamp, consumption_kwh, hour, season, voltage_v, current_a, reverse_flow) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -304,10 +310,10 @@ def inject_theft_scenarios(db):
     print(f"  -> M009 (Civil Lines): status={res_m009['theft_status']}, risk={res_m009['theft_risk_score']}/100, dev={res_m009['deviation_pct']}%")
 
     # --- Scenario 2: M027 (Sector 62) — HIGH THEFT RISK ---
-    # Pre-drop reading
+    # Prior reading in active theft window
     db.execute(
         "INSERT INTO readings (meter_id, timestamp, consumption_kwh, hour, season) VALUES (?, ?, ?, ?, ?)",
-        ('M027', (now - timedelta(minutes=50)).isoformat(), 8.4, hour, season)
+        ('M027', (now - timedelta(minutes=50)).isoformat(), 1.9, hour, season)
     )
     db.commit()
 
@@ -612,30 +618,23 @@ def live_simulation():
             season = get_season_from_date(now)
             base = profile[bucket]
 
-            # Live simulation probabilities for rich demo:
-            # 10% high theft risk bypass (< -30%)
-            # 12% suspicious under-consumption (-10% to -30%)
-            # 8% commercial over-consumption surge (NOT theft, +40% to +120%)
-            # 70% normal baseline variation
-            roll = random.random()
-            if roll < 0.10:
-                # High Theft: drop 55% to 80% below baseline
-                consumption = round(base * random.uniform(0.20, 0.45), 2)
-                # 30% chance of logging live physical tamper event
-                if random.random() < 0.30:
-                    ev_type = random.choice(['MAGNETIC_TAMPER', 'COVER_OPEN', 'NEUTRAL_BYPASS'])
-                    db.execute(
-                        "INSERT INTO tamper_events (meter_id, event_type, description, severity, timestamp) VALUES (?, ?, ?, ?, ?)",
-                        (meter_id, ev_type, f'Live sensor trigger: {ev_type}', 'HIGH', now.isoformat())
-                    )
-                    db.commit()
-            elif roll < 0.22:
-                # Suspicious under-consumption: drop 15% to 28% below baseline
-                consumption = round(base * random.uniform(0.72, 0.85), 2)
-            elif roll < 0.30:
-                # Over-consumption: surge 50% to 120% above baseline (NOT theft)
-                consumption = round(base * random.uniform(1.5, 2.2), 2)
+            # Maintain scenario consistency: normal meters stay near constant 24x7
+            reverse_flow = 0
+            if meter_id == 'M009':
+                # High Theft: Rotor slowed / Neodymium magnetic tamper (< -30%)
+                consumption = round(base * random.uniform(0.28, 0.33), 2)
+            elif meter_id == 'M027':
+                # High Theft: Reverse flow / terminal bypass jumper (< -30%)
+                consumption = round(base * random.uniform(0.20, 0.25), 2)
+                reverse_flow = 1
+            elif meter_id == 'M014':
+                # Suspicious under-consumption (-10% to -30%)
+                consumption = round(base * random.uniform(0.68, 0.74), 2)
+            elif meter_id == 'M005':
+                # Commercial over-consumption surge (NOT theft, +100% to +180%)
+                consumption = round(base * random.uniform(2.7, 3.1), 2)
             else:
+                # Normal 24x7 consumption: people use electricity 24x7, stays near constant
                 consumption = add_noise(base)
 
             cursor = db.execute(
