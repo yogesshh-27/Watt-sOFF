@@ -421,19 +421,19 @@
                 <li><a href="#track-section" id="navLinkTrack" onclick="switchPortalTab('track', true, event)" class="nav-link">Track Status</a></li>
                 <li><a href="#bounty-section" id="navLinkBounty" onclick="switchPortalTab('bounty', true, event)" class="nav-link">Bounties</a></li>
                 <li><a href="#legal-section" id="navLinkLegal" onclick="switchPortalTab('legal', true, event)" class="nav-link">Statutory Laws</a></li>
-                <li><a href="/static/dashboard.html" class="nav-link" style="color: var(--text-light-muted);">Officer Admin &#8599;</a></li>
+                <li><a href="/static/dashboard.html" class="nav-link" style="color: var(--text-light-muted);">Officer &#8599;</a></li>
             </ul>
             <div class="nav-actions">
                 <!-- Verified User Chip (Shown when logged in via Firebase) -->
-                <div id="navUserBadge" style="display: none; align-items: center; gap: 8px; margin-right: 4px; background: rgba(0, 0, 0, 0.04); border: 1px solid rgba(0, 0, 0, 0.08); padding: 3px 6px 3px 4px; border-radius: var(--radius-full); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);">
-                    <div id="navAvatar" style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; box-shadow: 0 2px 6px rgba(6, 182, 212, 0.35); flex-shrink: 0; overflow: hidden;">
+                <div id="navUserBadge" style="display: none; align-items: center; gap: 7px; background: rgba(0, 0, 0, 0.04); border: 1px solid rgba(0, 0, 0, 0.08); padding: 3px 6px 3px 4px; border-radius: var(--radius-full); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03); flex-shrink: 0;">
+                    <div id="navAvatar" style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #06B6D4, #6366F1); color: #FFF; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; box-shadow: 0 2px 5px rgba(6, 182, 212, 0.35); flex-shrink: 0; overflow: hidden;">
                         C
                     </div>
-                    <div style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; padding-left: 2px;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding-left: 2px;">
                         <span id="navUserName" style="font-size: 0.82rem; font-weight: 700; color: #0A0A0C; letter-spacing: -0.01em;">Citizen</span>
-                        <span title="Verified with Google" style="display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: #10B981; color: #FFFFFF; font-size: 9px; line-height: 1; flex-shrink: 0; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);">&#10003;</span>
+                        <span title="Verified with Google" style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #10B981; color: #FFFFFF; font-size: 8.5px; line-height: 1; flex-shrink: 0; box-shadow: 0 1px 2px rgba(16, 185, 129, 0.3);">&#10003;</span>
                     </div>
-                    <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 3px 9px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-color: rgba(0, 0, 0, 0.12); color: #4B5563; background: #FFFFFF; border-radius: var(--radius-full); white-space: nowrap; line-height: 1.2; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                    <button onclick="handleCitizenFirebaseSignOut()" class="btn-pill btn-pill-outline btn-pill-sm" style="padding: 3px 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-color: rgba(0, 0, 0, 0.12); color: #4B5563; background: #FFFFFF; border-radius: var(--radius-full); white-space: nowrap; line-height: 1.2; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                         Sign Out
                     </button>
                 </div>
