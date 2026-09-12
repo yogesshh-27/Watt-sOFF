@@ -7,8 +7,9 @@ dist/
 build/
 *.egg
 
-# SQLite database (generated at runtime)
-wattsoff.db
+# SQLite database temporary files
+*.db-shm
+*.db-wal
 
 # Environment
 .env

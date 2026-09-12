@@ -56,7 +56,8 @@ def reset_db(db_path=None):
         except Exception:
             conn = get_db(db_path)
             conn.execute("PRAGMA foreign_keys = OFF")
-            tables = ['alerts', 'anomalies', 'tamper_events', 'baselines', 'readings', 'meters', 'transformers']
+            cursor = conn.cursor()
+            tables = [row[0] for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()]
             for t in tables:
                 conn.execute(f"DROP TABLE IF EXISTS {t}")
             conn.commit()

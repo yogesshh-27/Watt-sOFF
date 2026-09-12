@@ -35,7 +35,7 @@ from flask_cors import CORS
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from db import get_db, init_db, IS_VERCEL, DB_PATH
+from db import get_db, init_db, IS_VERCEL, DB_PATH, PROJECT_DIR
 from detection import (
     process_reading, get_severity, compute_expected, compute_deviation,
     THEFT_STATUS_NORMAL, THEFT_STATUS_SUSPICIOUS, THEFT_STATUS_HIGH_THEFT, THEFT_STATUS_OVER_CONSUMPTION
@@ -52,20 +52,38 @@ CORS(app)
 def ensure_seeded():
     """Auto-seed the database if it doesn't exist (Vercel cold start)."""
     if not os.path.exists(DB_PATH):
-        init_db()
-        from simulate import (
-            seed_transformers, seed_meters, seed_historical_readings,
-            compute_baselines, inject_anomalies, seed_tamper_events, update_transformer_balances
-        )
-        db = get_db()
-        seed_transformers(db)
-        seed_meters(db)
-        seed_historical_readings(db)
-        compute_baselines(db)
-        inject_anomalies(db)
-        seed_tamper_events(db)
-        update_transformer_balances(db)
-        db.close()
+        # 1. Try copying pre-built database if bundled with the repository
+        bundled_db = os.path.join(PROJECT_DIR, 'wattsoff.db')
+        if os.path.exists(bundled_db) and os.path.abspath(bundled_db) != os.path.abspath(DB_PATH):
+            try:
+                import shutil
+                shutil.copyfile(bundled_db, DB_PATH)
+                print(f"[db] Successfully copied bundled database to {DB_PATH}")
+                return
+            except Exception as copy_err:
+                print(f"[db] Bundled DB copy failed ({copy_err}), falling back to programmatic seed...")
+
+        # 2. Programmatic seeding with correct function names
+        try:
+            init_db()
+            from simulate import (
+                seed_transformers, seed_meters, seed_historical_readings,
+                compute_baselines, seed_tamper_events, inject_theft_scenarios,
+                update_transformer_energy_balance, seed_complaints
+            )
+            db = get_db()
+            seed_transformers(db)
+            seed_meters(db)
+            seed_historical_readings(db)
+            compute_baselines(db)
+            seed_tamper_events(db)
+            inject_theft_scenarios(db)
+            update_transformer_energy_balance(db)
+            seed_complaints(db)
+            db.close()
+            print(f"[db] Database seeded successfully at {DB_PATH}")
+        except Exception as seed_err:
+            print(f"[db] ERROR: ensure_seeded failed: {seed_err}")
 
 
 @app.before_request
@@ -715,12 +733,31 @@ def map_data():
 # API: Citizen Vigilance & Power Theft Complaints
 # ---------------------------------------------------------------------------
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'complaints')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+if IS_VERCEL:
+    UPLOAD_FOLDER = '/tmp/uploads/complaints'
+else:
+    UPLOAD_FOLDER = os.path.join(PROJECT_DIR, 'static', 'uploads', 'complaints')
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception:
+    pass
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/static/uploads/complaints/<path:filename>')
+def serve_complaint_photo(filename):
+    """Serve uploaded photos correctly whether stored in static/ or /tmp on Vercel."""
+    if os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    fallback = os.path.join(PROJECT_DIR, 'static', 'uploads', 'complaints')
+    if os.path.exists(os.path.join(fallback, filename)):
+        return send_from_directory(fallback, filename)
+    return ('', 404)
 
 
 @app.route('/api/citizen/complaints', methods=['GET', 'POST'])
